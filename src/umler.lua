@@ -9,10 +9,8 @@ if not package.loaded.StackTracePlus then
     )
 end
 
-
 local inspect = require 'inspect'
 
-local envmt = {}
 local out = io.stdout
 
 local function W(...)
@@ -36,28 +34,9 @@ local function UH(...)
     return table.unpack(t)
 end
 
+local arrows = {}
 local classmt = {}
 classmt.__index = classmt
-
-function envmt:__index(k)
-    if _ENV[k] then
-        return _ENV[k]
-    else
-        local t = {}
-        self[k] = t
-        return t
-    end
-end
-
-function envmt:__newindex(k,v)
-    if true then
-        v.name = k
-        rawset(self,k,v)
-    end
-end
-
-local arrows = {}
-
 do
     for name, style in next, {
         depends = {shape = 'dashed', head = 'open'},
@@ -91,85 +70,80 @@ do
 end
 
 local env = {}
-
-function env.combine(...)
-    local r = {}
-    for _,t in ipairs{...} do
-        for k,v in pairs(t) do
-            t[k] = v
+local envmt = {}
+local modulemt = envmt
+do
+    local function wters(w)
+        return function(c, filt)
+            local t = c.Methods or {}
+            for field, type in pairs(c.Fields or {}) do
+                local ok
+                if filt then
+                    ok = filt[field]
+                else
+                    ok = true
+                end
+                if ok then
+                    t[w..field:sub(1,1):upper()..field:sub(2)] = '('..type..')'
+                end
+            end
+            c.Methods = t
         end
     end
-    return r
-end
-
-function env.Class(t)
-    return setmetatable(t,classmt)
-end
-
-function env.Abstract(t)
-    t.abstract = true
-    return env.Class(t)
-end
-
-function env.Interface(t)
-    t.interface = true
-    return env.Class(t)
-end
-
-local modulemt = {__newindex = envmt.__newindex}
-function modulemt:__index(k)
-    local t = {}
-    self[k]=t
-    return t
-end
     
-function env.Module(t)
-    return setmetatable(t,modulemt)
-end
+    env.getters = wters 'get'
+    env.setters = wters 'set'
 
-function env.keys(t)
-    local t,i = {},1
-    for k in pairs(t) do
-        t[i],i=k,i+1
+    function env.Class(t)
+        return setmetatable(t,classmt)
     end
-    return t
-end
 
-function env.values(t)
-    local t,i = {},1
-    for k,v in pairs(t) do
-        t[i],i=v,i+1
+    function env.Interface(t)
+        t.interface = true
+        return env.Class(t)
     end
-    return t
-end
 
-function wters(w)
-    return function(c, filt)
-        local t = c.Methods or {}
-        for field, type in pairs(c.Fields or {}) do
-            local ok
-            if filt then
-                ok = filt[field]
-            else
-                ok = true
-            end
-            if ok then
-                t[w..field:sub(1,1):upper()..field:sub(2)] = '('..type..')'
+    function env.Abstract(t)
+        t.abstract = true
+        return env.Class(t)
+    end
+
+    function env.Module(t)
+        return setmetatable(t,modulemt)
+    end
+
+    function envmt:__index(k)
+        if self~=env and env[k]~=nil then
+            return env[k]
+        elseif _ENV[k]~=nil then
+            return _ENV[k]
+        else
+            local t = {}
+            self[k] = t
+            return t
+        end
+    end
+
+    function envmt:__newindex(k,v)
+        rawset(v,'name',k)
+        rawset(self,k,v)
+    end
+
+    function env.combine(...)
+        local r = {}
+        for _,t in ipairs{...} do
+            for k,v in pairs(t) do
+                r[k]=v
             end
         end
-        c.Methods = t
+        return t
     end
+
+    setmetatable(env,envmt)
 end
-
-env.getters = wters 'get'
-env.setters = wters 'set'
-
-setmetatable(env, envmt)
-assert(loadfile(arg[1],'t',env))()
 
 --local out = assert(io.open(arg[1],'w'))
 --io.stderr:write(inspect(env))
-io.stderr:write(inspect(env))
 
 local function procarrows(arrows)
     for _, arrow in ipairs(arrows) do
@@ -229,22 +203,32 @@ local function procmodule(name,env,path)
     L '}'
 end
 
-local function procroot(env)
+local function procroot(env,rootname)
     L 'digraph {'
     L 'node [shape=rect]'
-    local path = {'Main',n=1}
-    function path:push(x)
-        path[self.n+1],self.n = x,self.n+1
+    
+    local path = {rootname,n=1}
+    do
+        function path:push(x)
+            path[self.n+1],self.n = x,self.n+1
+        end
+        function path:pop()
+            assert(self.n>0,'path stack underflow')
+            local ret = self[self.n]
+            self[self.n] = nil
+            self.n = self.n-1
+            return ret
+        end
+        function path:__tostring()
+            return table.concat(self,'::')
+        end
+        setmetatable(path,path)
     end
-    function path:pop()
-        assert(self.n>0,'path stack underflow')
-        local ret = self[self.n]
-        self[self.n] = nil
-        self.n = self.n-1
-    end
+
     procmodule('Main',env,path)
     procarrows(arrows)
     L '}'
 end
 
+assert(loadfile(arg[1],'t',env))()
 procroot(env)

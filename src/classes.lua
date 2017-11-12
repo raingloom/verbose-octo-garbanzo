@@ -1,69 +1,75 @@
-Server = Class
+Server = Module
 {
-    Fields = {
-        users = 'UserRegistry',
-    },
-    Methods = {
-    }
 }
-
-User = Abstract
-{
-    Fields = {
-        name = 'Name',
-        email = 'Email',
-        password = 'Password',
-        address = 'Address'
-    },
-    Methods = {
+do
+    local _ENV = Server
+    Database = Class
+    {
     }
-}
 
-UserRegistry = Class
-{
-    Fields = {
-        users = 'Set<Users>',
-    },
-    Methods = {
-        register = '('..table.concat(values(User.Fields),',')..')',
-    }
-}
-
-SessionManager = Class
-{
-    Fields = {
-        sessions = 'Set<Session>',
-    },
-    Methods = {
-        login = '(Email,Password)->Maybe(Session)',
-    }
-}
-Server : aggregates (SessionManager, {head = '1', tail = '1'})
-
-Customer = Class
-{
-    Fields = combine
-    (
-        User.Fields,
-        {
-            address = 'Address'
+    Server = Class
+    {
+        Fields = {
+            users = 'Set<User>',
+            sessions = 'Set<Session>',
+        },
+        Methods = {
         }
-    ),
-}
-Customer : implements (User)
+    }
 
-Vendor = Class
-{
-}
-Vendor : implements (User)
+    User = Abstract
+    {
+        Fields = {
+            name = 'Name',
+            email = 'Email',
+            password = 'Password',
+            address = 'Address'
+        },
+        Methods = {
+        }
+    }
 
-Session = Interface
+    Customer = Class
+    {
+        Fields = combine
+        (
+            User.Fields,
+            {
+                address = 'Address',
+                basket = 'Basket',
+            }
+        ),
+    }
+    Customer : implements (User)
+
+    Basket = Class
+    {
+        Fields = {
+        },
+    }
+
+    Vendor = Class
+    {
+        Fields = combine
+        (
+            User.Fields,
+            {
+            }
+        ),
+    }
+    Vendor : implements (User)
+
+    Session = Interface
+    {
+        Fields = {
+            user = 'User',
+            expired = 'bool'
+        },
+        Methods = {
+            logout = '()'
+        },
+    }
+end
+Client = Class
 {
-    Fields = {
-        user = 'User',
-        expired = 'bool'
-    },
-    Methods = {
-        logout = '()'
-    },
 }
