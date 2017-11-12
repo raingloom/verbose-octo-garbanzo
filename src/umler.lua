@@ -101,6 +101,22 @@ function env.Interface(t)
     return env.Class(t)
 end
 
+function env.keys(t)
+    local t,i = {},1
+    for k in pairs(t) do
+        t[i],i=k,i+1
+    end
+    return t
+end
+
+function env.values(t)
+    local t,i = {},1
+    for k,v in pairs(t) do
+        t[i],i=v,i+1
+    end
+    return t
+end
+
 function wters(w)
     return function(c, filt)
         local t = c.Methods or {}
@@ -146,6 +162,7 @@ for name, tbl in pairs(env) do
             HR()
             local function procfields(tbl, k)
                 for fieldname, field in pairs( tbl[k] or {} ) do
+                    field = field:gsub('[^%w%(%)]',function(c)return '&#'..c:byte()..';'end)
                     local privacy, fieldname = fieldname:match('([%+%-]?)(.*)')
                     privacy = privacy == '' and (k == 'Fields' and '-' or '+') or privacy
                     W '<TR><TD ALIGN="LEFT">'

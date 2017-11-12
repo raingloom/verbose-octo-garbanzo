@@ -3,6 +3,8 @@ Server = Class
     Fields = {
         users = 'UserRegistry',
     },
+    Methods = {
+    }
 }
 
 User = Abstract
@@ -11,12 +13,21 @@ User = Abstract
         name = 'Name',
         email = 'Email',
         password = 'Password',
+        address = 'Address'
     },
     Methods = {
     }
 }
-getters(User)
-setters(User)
+
+UserRegistry = Class
+{
+    Fields = {
+        users = 'Set<Users>',
+    },
+    Methods = {
+        register = '('..table.concat(values(User.Fields),',')..')'
+    }
+}
 
 Customer = Class
 {
@@ -29,7 +40,6 @@ Customer = Class
     ),
 }
 Customer : implements (User)
-getters(Customer)
 
 Session = Interface
 {
