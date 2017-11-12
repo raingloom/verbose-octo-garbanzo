@@ -28,6 +28,14 @@ local function HR()
     W '<TR><TD BGCOLOR="Black"></TD></TR>'
 end
 
+local function UH(...)
+    local t = table.pack(...)
+    for k,v in ipairs(t) do
+        t[k]=v:gsub('[^%w%(%)]',function(c)return '&#'..c:byte()..';'end)
+    end
+    return table.unpack(t)
+end
+
 local classmt = {}
 classmt.__index = classmt
 
@@ -54,23 +62,30 @@ do
     for name, style in next, {
         depends = {shape = 'dashed', head = 'open'},
         associate = {shape = 'solid', head = 'open'},
-        aggregates = {shape = 'solid', tail = 'diamond'},
-        contains = {shape = 'solid', tail = 'odiamong'},
+        aggregates = {shape = 'solid', tail = 'diamond', dir = 'back'},
+        contains = {shape = 'solid', tail = 'odiamond', dir = 'back'},
         specializes = {shape = 'solid', head = 'normal'},
-        generalizes = {shape = 'solid', tail = 'normal'},
-        implements = {shape = 'dashed', tail = 'normal'},
+        generalizes = {shape = 'solid', tail = 'normal', dir = 'back'},
+        implements = {shape = 'dashed', tail = 'normal', dir = 'back'},
     } do
-        classmt[name] = function(self, other, label, qhead, qtail)
+        classmt[name] = function(self, other, labels)
             local head = self.name .. '->' .. other.name .. '['
             local t = {}
             for attr, val in pairs(style) do
                 attr = ({
-                        head = arrowhead,
-                        tail = arrowtail,
+                        head = 'arrowhead',
+                        tail = 'arrowtail',
                        })[attr] or attr
                 t[#t+1] = attr .. '=' .. val
             end
-            arrows[#arrows+1]=head .. table.concat(t, ',') .. ']'
+            for attr, val in pairs(labels or {}) do
+                attr = ({
+                        head = 'headlabel',
+                        tail = 'taillabel',
+                       })[attr] or attr
+                t[#t+1] = attr .. '=' .. UH(val)
+            end
+            arrows[#arrows+1]=head .. table.concat(t, ', ') .. ']'
         end
     end
 end
@@ -155,6 +170,9 @@ for name, tbl in pairs(env) do
             W'<TR><TD>'
             if tbl.abstract then
                 W('<I>',name,'</I>')
+            elseif tbl.interface then
+                L(UH('<<interface>>'),'<BR/>')
+                W(name)
             else
                 W(name)
             end
@@ -162,14 +180,13 @@ for name, tbl in pairs(env) do
             HR()
             local function procfields(tbl, k)
                 for fieldname, field in pairs( tbl[k] or {} ) do
-                    field = field:gsub('[^%w%(%)]',function(c)return '&#'..c:byte()..';'end)
                     local privacy, fieldname = fieldname:match('([%+%-]?)(.*)')
                     privacy = privacy == '' and (k == 'Fields' and '-' or '+') or privacy
                     W '<TR><TD ALIGN="LEFT">'
                     if k == 'Methods' then
-                        W(privacy, fieldname, field)
+                        W(privacy, UH(fieldname, field))
                     else
-                        W(privacy, fieldname, ':', field)
+                        W(privacy, UH(fieldname), ':', UH(field))
                     end
                     W '</TD></TR>'
                     W '\n'

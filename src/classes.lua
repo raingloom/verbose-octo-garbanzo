@@ -25,9 +25,20 @@ UserRegistry = Class
         users = 'Set<Users>',
     },
     Methods = {
-        register = '('..table.concat(values(User.Fields),',')..')'
+        register = '('..table.concat(values(User.Fields),',')..')',
     }
 }
+
+SessionManager = Class
+{
+    Fields = {
+        sessions = 'Set<Session>',
+    },
+    Methods = {
+        login = '(Email,Password)->Maybe(Session)',
+    }
+}
+Server : aggregates (SessionManager, {head = '1', tail = '1'})
 
 Customer = Class
 {
@@ -40,6 +51,11 @@ Customer = Class
     ),
 }
 Customer : implements (User)
+
+Vendor = Class
+{
+}
+Vendor : implements (User)
 
 Session = Interface
 {
