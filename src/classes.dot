@@ -1,0 +1,7 @@
+digraph {
+    node [shape=rect]
+    struct1 [label=<
+             <TABLE>
+             <TR><TD></TD></TR>
+             </TABLE>>]
+}

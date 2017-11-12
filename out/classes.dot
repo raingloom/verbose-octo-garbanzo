@@ -1,0 +1,27 @@
+digraph {
+node [shape=rect]
+Customer[label=<
+<TABLE>
+<TR><TD>Customer</TD></TR>
+<TR><TD BGCOLOR="Black"></TD></TR><TR><TD BGCOLOR="Black"></TD></TR></TABLE>
+>];
+UserRegistry[label=<
+<TABLE>
+<TR><TD>UserRegistry</TD></TR>
+<TR><TD BGCOLOR="Black"></TD></TR><TR><TD ALIGN="LEFT">-users:Set(User)</TD></TR>
+<TR><TD BGCOLOR="Black"></TD></TR><TR><TD ALIGN="LEFT">+register(User)</TD></TR>
+</TABLE>
+>];
+User[label=<
+<TABLE>
+<TR><TD><I>User</I></TD></TR>
+<TR><TD BGCOLOR="Black"></TD></TR><TR><TD ALIGN="LEFT">-password:Password</TD></TR>
+<TR><TD ALIGN="LEFT">-name:Name</TD></TR>
+<TR><TD ALIGN="LEFT">-email:Email</TD></TR>
+<TR><TD BGCOLOR="Black"></TD></TR><TR><TD ALIGN="LEFT">+getEmail(Email)</TD></TR>
+<TR><TD ALIGN="LEFT">+getPassword(Password)</TD></TR>
+<TR><TD ALIGN="LEFT">+getName(Name)</TD></TR>
+</TABLE>
+>];
+Customer->User[shape=dashed,tail=normal]
+}
