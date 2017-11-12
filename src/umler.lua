@@ -116,6 +116,17 @@ function env.Interface(t)
     return env.Class(t)
 end
 
+local modulemt = {__newindex = envmt.__newindex}
+function modulemt:__index(k)
+    local t = {}
+    self[k]=t
+    return t
+end
+    
+function env.Module(t)
+    return setmetatable(t,modulemt)
+end
+
 function env.keys(t)
     local t,i = {},1
     for k in pairs(t) do
@@ -160,49 +171,80 @@ assert(loadfile(arg[1],'t',env))()
 --io.stderr:write(inspect(env))
 io.stderr:write(inspect(env))
 
-L 'digraph {'
-L 'node [shape=rect]'
-for name, tbl in pairs(env) do
-    if type(tbl) == 'table' and getmetatable(tbl) == classmt then
-        W(name) L '[label=<'
-        L '<TABLE>'
-        do
-            W'<TR><TD>'
-            if tbl.abstract then
-                W('<I>',name,'</I>')
-            elseif tbl.interface then
-                L(UH('<<interface>>'),'<BR/>')
-                W(name)
-            else
-                W(name)
-            end
-            L'</TD></TR>'
-            HR()
-            local function procfields(tbl, k)
-                for fieldname, field in pairs( tbl[k] or {} ) do
-                    local privacy, fieldname = fieldname:match('([%+%-]?)(.*)')
-                    privacy = privacy == '' and (k == 'Fields' and '-' or '+') or privacy
-                    W '<TR><TD ALIGN="LEFT">'
-                    if k == 'Methods' then
-                        W(privacy, UH(fieldname, field))
-                    else
-                        W(privacy, UH(fieldname), ':', UH(field))
-                    end
-                    W '</TD></TR>'
-                    W '\n'
+local function procarrows(arrows)
+    for _, arrow in ipairs(arrows) do
+        L(arrow)
+    end
+end
+
+local function procclass(name, tbl, path)
+    W(name)
+    L '[label=<'
+    L '<TABLE>'
+    do
+        W'<TR><TD>'
+        if tbl.abstract then
+            W('<I>',name,'</I>')
+        elseif tbl.interface then
+            L(UH('<<interface>>'),'<BR/>')
+            W(name)
+        else
+            W(name)
+        end
+        L'</TD></TR>'
+        HR()
+        local function procfields(tbl, k)
+            for fieldname, field in pairs( tbl[k] or {} ) do
+                local privacy, fieldname = fieldname:match('([%+%-]?)(.*)')
+                privacy = privacy == '' and (k == 'Fields' and '-' or '+') or privacy
+                W '<TR><TD ALIGN="LEFT">'
+                if k == 'Methods' then
+                    W(privacy, UH(fieldname, field))
+                else
+                    W(privacy, UH(fieldname), ':', UH(field))
                 end
+                W '</TD></TR>'
+                W '\n'
             end
-            procfields(tbl, 'Fields')
-            HR()
-            procfields(tbl, 'Methods')
         end
-        L '</TABLE>'
-        L '>];'
-        end
+        procfields(tbl, 'Fields')
+        HR()
+        procfields(tbl, 'Methods')
+    end
+    L '</TABLE>'
+    L '>];'
 end
 
-for _, arrow in ipairs(arrows) do
-    L(arrow)
+local function procmodule(name,env,path)
+    L 'subgraph {'
+    for name, tbl in pairs(env) do
+        if type(tbl) == 'table' then
+            if getmetatable(tbl) == classmt then
+                procclass(name,tbl,path)
+            elseif getmetatable(tbl) == modulemt then
+                procmodule(name,tbl,path)
+            end
+        end
+    end    
+    L '}'
 end
 
-L '}'
+local function procroot(env)
+    L 'digraph {'
+    L 'node [shape=rect]'
+    local path = {'Main',n=1}
+    function path:push(x)
+        path[self.n+1],self.n = x,self.n+1
+    end
+    function path:pop()
+        assert(self.n>0,'path stack underflow')
+        local ret = self[self.n]
+        self[self.n] = nil
+        self.n = self.n-1
+    end
+    procmodule('Main',env,path)
+    procarrows(arrows)
+    L '}'
+end
+
+procroot(env)
