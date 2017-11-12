@@ -102,11 +102,12 @@ function env.Interface(t)
 end
 
 function wters(w)
-    return function(c)
+    return function(c, filt)
+        local t = c.Methods or {}
         for field, type in pairs(c.Fields or {}) do
-            local t = c.Methods or {}
             t[w..field:sub(1,1):upper()..field:sub(2)] = '('..type..')'
         end
+        c.Methods = t
     end
 end
 
