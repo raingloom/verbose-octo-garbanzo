@@ -105,7 +105,15 @@ function wters(w)
     return function(c, filt)
         local t = c.Methods or {}
         for field, type in pairs(c.Fields or {}) do
-            t[w..field:sub(1,1):upper()..field:sub(2)] = '('..type..')'
+            local ok
+            if filt then
+                ok = filt[field]
+            else
+                ok = true
+            end
+            if ok then
+                t[w..field:sub(1,1):upper()..field:sub(2)] = '('..type..')'
+            end
         end
         c.Methods = t
     end
