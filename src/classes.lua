@@ -1,3 +1,10 @@
+Server = Class
+{
+    Fields = {
+        users = 'UserRegistry',
+    },
+}
+
 User = Abstract
 {
     Fields = {
@@ -9,6 +16,7 @@ User = Abstract
     }
 }
 getters(User)
+setters(User)
 
 Customer = Class
 {
@@ -23,12 +31,13 @@ Customer = Class
 Customer : implements (User)
 getters(Customer)
 
-UserRegistry = Class
+Session = Interface
 {
     Fields = {
-        users = 'Set(User)'
+        user = 'User',
+        expired = 'bool'
     },
     Methods = {
-        register = '(User)',
-    }
+        logout = '()'
+    },
 }
