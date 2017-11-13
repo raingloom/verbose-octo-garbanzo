@@ -225,7 +225,7 @@ local function procroot(env,rootname)
         setmetatable(path,path)
     end
 
-    procmodule('Main',env,path)
+    procmodule(rootname,env,path)
     procarrows(arrows)
     L '}'
 end
