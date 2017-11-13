@@ -124,6 +124,22 @@ do
         end
     end
 
+    function privacy(t,p)
+        local r={}
+        for k,v in pairs(t) do
+            t[p..k]=v
+        end
+        return r
+    end
+
+    function env.private(t)
+        return privacy(t,'-')
+    end
+
+    function env.public(t)
+        return privacy(t,'+')
+    end
+
     function env.combine(...)
         local r = {}
         for _,t in ipairs{...} do
