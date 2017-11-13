@@ -48,7 +48,7 @@ do
         implements = {shape = 'dashed', tail = 'normal', dir = 'back'},
     } do
         classmt[name] = function(self, other, labels)
-            local head = self.name .. '->' .. other.name .. '['
+            local head = '%s->%s['
             local t = {}
             for attr, val in pairs(style) do
                 attr = ({
@@ -64,7 +64,7 @@ do
                        })[attr] or attr
                 t[#t+1] = attr .. '=' .. UH(val)
             end
-            arrows[#arrows+1]=head .. table.concat(t, ', ') .. ']'
+            arrows[#arrows+1]={fmt = head .. table.concat(t, ', ') .. ']', from = self, to = other}
         end
     end
 end
@@ -124,11 +124,6 @@ do
         end
     end
 
-    function envmt:__newindex(k,v)
-        rawset(v,'name',k)
-        rawset(self,k,v)
-    end
-
     function env.combine(...)
         local r = {}
         for _,t in ipairs{...} do
@@ -145,69 +140,89 @@ end
 --local out = assert(io.open(arg[1],'w'))
 --io.stderr:write(inspect(env))
 
+local nodenames = {}
+
 local function procarrows(arrows)
     for _, arrow in ipairs(arrows) do
-        L(arrow)
+        L(
+            string.format(
+                arrow.fmt,
+                nodenames[arrow.from],
+                nodenames[arrow.to]
+            )
+        )
     end
 end
 
 local function procclass(name, tbl, path)
-    W(name)
-    L '[label=<'
-    L '<TABLE>'
+    path:push(name)
     do
-        W'<TR><TD>'
-        if tbl.abstract then
-            W('<I>',name,'</I>')
-        elseif tbl.interface then
-            L(UH('<<interface>>'),'<BR/>')
-            W(name)
-        else
-            W(name)
-        end
-        L'</TD></TR>'
-        HR()
-        local function procfields(tbl, k)
-            for fieldname, field in pairs( tbl[k] or {} ) do
-                local privacy, fieldname = fieldname:match('([%+%-]?)(.*)')
-                privacy = privacy == '' and (k == 'Fields' and '-' or '+') or privacy
-                W '<TR><TD ALIGN="LEFT">'
-                if k == 'Methods' then
-                    W(privacy, UH(fieldname, field))
-                else
-                    W(privacy, UH(fieldname), ':', UH(field))
-                end
-                W '</TD></TR>'
-                W '\n'
+        nodenames[tbl] = path:concat('_')
+        
+        W(path:concat('_'))
+        L '[label=<'
+        L '<TABLE>'
+        do
+            W'<TR><TD>'
+            if tbl.abstract then
+                W('<I>',name,'</I>')
+            elseif tbl.interface then
+                L(UH('<<interface>>'),'<BR/>')
+                W(name)
+            else
+                W(name)
             end
+            L'</TD></TR>'
+            HR()
+            local function procfields(tbl, k)
+                for fieldname, field in pairs( tbl[k] or {} ) do
+                    local privacy, fieldname = fieldname:match('([%+%-]?)(.*)')
+                    privacy = privacy == '' and (k == 'Fields' and '-' or '+') or privacy
+                    W '<TR><TD ALIGN="LEFT">'
+                    if k == 'Methods' then
+                        W(privacy, UH(fieldname, field))
+                    else
+                        W(privacy, UH(fieldname), ':', UH(field))
+                    end
+                    W '</TD></TR>'
+                    W '\n'
+                end
+            end
+            procfields(tbl, 'Fields')
+            HR()
+            procfields(tbl, 'Methods')
         end
-        procfields(tbl, 'Fields')
-        HR()
-        procfields(tbl, 'Methods')
+        L '</TABLE>'
+        L '>];'
     end
-    L '</TABLE>'
-    L '>];'
+    assert(path:pop()==name)
 end
 
 local function procmodule(name,env,path)
-    L 'subgraph {'
-    for name, tbl in pairs(env) do
-        if type(tbl) == 'table' then
-            if getmetatable(tbl) == classmt then
-                procclass(name,tbl,path)
-            elseif getmetatable(tbl) == modulemt then
-                procmodule(name,tbl,path)
+    path:push(name)
+    do
+        W 'subgraph cluster_'
+        W (path:concat('_'))
+        L ' {'
+        for k, v in pairs(env) do
+            if type(v) == 'table' then
+                if getmetatable(v) == classmt then
+                    procclass(k,v,path)
+                elseif getmetatable(v) == modulemt then
+                    procmodule(k,v,path)
+                end
             end
-        end
-    end    
-    L '}'
+        end    
+        L '}'
+    end
+    assert(path:pop()==name)
 end
 
 local function procroot(env,rootname)
     L 'digraph {'
     L 'node [shape=rect]'
     
-    local path = {rootname,n=1}
+    local path = {n=0}
     do
         function path:push(x)
             path[self.n+1],self.n = x,self.n+1
@@ -219,8 +234,8 @@ local function procroot(env,rootname)
             self.n = self.n-1
             return ret
         end
-        function path:__tostring()
-            return table.concat(self,'::')
+        function path:concat(s)
+            return table.concat(self,s)
         end
         setmetatable(path,path)
     end
@@ -231,4 +246,4 @@ local function procroot(env,rootname)
 end
 
 assert(loadfile(arg[1],'t',env))()
-procroot(env)
+procroot(env,'WebShoppe')
