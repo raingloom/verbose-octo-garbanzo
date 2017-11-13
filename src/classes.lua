@@ -40,74 +40,112 @@ do
     }
 end
 
-Client = Module{}
+Clients = Module{}
 do
-    local _ENV = Client
-
-    Product = Class{}
     
-    Cart = Class
-    {
-        Fields = {
-            items = '(ItemID,Natural) //again, tuple. good languages have them. use a good language.',
-        },
-        Methods = {
-            clear = '()',
-            price = '():Money',
-        }
-    }
-
-    Views = Module{}
-    do
-        local _ENV = Views
-        View = Abstract{}
-        
-        Browsing = Class
-        {
-            Fields = {
-                filter = 'InventoryQuery //global for the client coz they probly want this saved',
-                listing = '(Product,Logical) //product + is it in stock',
-            },
-            Methods = {
-                listInventory = '(filtered:Logical):Self',
-                pay = '():Cart'
-            }
-        }
-
-        Cart = Class
-        {
-            Methods = {
-                
-            }
-        }
-
-        io.stderr:write(require'inspect'(Views))
-        for _,cls in pairs(Views) do
+    local function spechelper(m,Views)
+        for _,cls in pairs(m) do
             if cls~=View then
+                cls.Methods = combine(View.Methods, cls.Methods)
+                cls.Fields = combine(View.Fields, cls.Fields)
                 cls:specializes(View)
             end
-            cls.Fields.session = 'Session'
         end
     end
+    
+    local _ENV = Clients
 
-    CustomerSession = Class
-    {
-        Fields = {
-            token = 'Maybe<Token>> //is user logged in?',
-            view = 'View',
-            cart = 'Cart',
-            payMethod = 'PayMethod',
-            state = 'SessionState',
+    Shared = Module {
+        Session = Abstract
+        {
+            Fields = {
+                token = 'Maybe<Token>> //is user logged in?',
+                view = 'View',
+            },
+            Methods = {
+                register = Server.User.Methods.User,
+                login = '(email:Email,password:Password)',
+            },
         },
-        Methods = {
-            register = Server.User.Methods.User,
-            login = '(email:Email,password:Password)',
-            addProduct = '(product:Product,quantity:Natural)',
-            removeProduct = '(product)',
-            clearCart = '()',
-            cartPriceTotal = '():Money',
-            setPayMethod = '(method:PayMethod)',
-            sendOrder = '()',
+        
+        Product = Class{},
+        
+        Cart = Class
+        {
+            Fields = {
+                items = '(ItemID,Natural) //again, tuple. good languages have them. use a good language.',
+            },
+            Methods = {
+                clear = '()',
+                price = '():Money',
+            }
         },
+
+        View = Abstract{},
     }
+
+    Customer = Module{}
+    do
+        local _ENV = Customer
+
+        Views = Module{}
+        do
+            local _ENV = Views
+            Browsing = Class
+            {
+                Fields = {
+                    filter = 'InventoryQuery //stored in view coz the user probly want this saved',
+                    listing = '(Product,Logical) //product + is it in stock',
+                    cart = 'WebShoppe::Clients::Cart'
+                },
+                Methods = {
+                    list = '(filtered:Logical)',
+                    pay = '():Cart',
+                    add = '(product:Product,quantity:Natural)',
+                }
+            }
+
+            Cart = Class
+            {
+                Methods = {
+                    remove = '(product:Product)',
+                    setQuantity = '(product:Product,quantity:Natural)',
+                    clear = '():Browsing',
+                    totalPrice = '():Money',
+                    pay = '():PaymentMethodSelection',
+                }
+            }
+
+            PaymentMethodSelection = Class
+            {
+                Fields = {
+                    method = 'PaymentMethod',
+                },
+                Methods = {
+                    selectMethod = '(method:PaymentMethod)',
+                    confirm = '():Browsing',
+                }
+            }
+            spechelper(_ENV, Shared.View)
+        end
+    end
+    
+    Vendor = Module{}
+    do
+        local _ENV = Vendor
+
+        IncomingOrders = Class
+        {
+            
+        }
+
+        AddProduct = Class
+        {
+            Methods = {
+                add = '',
+            }
+        }
+        
+        spechelper(_ENV,Shared.View)
+    end
 end
