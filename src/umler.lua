@@ -204,6 +204,9 @@ local function procmodule(name,env,path)
         W 'subgraph cluster_'
         W (path:concat('_'))
         L ' {'
+        W 'label=<<B>'
+        W (UH(name))
+        L '</B>>'
         for k, v in pairs(env) do
             if type(v) == 'table' then
                 if getmetatable(v) == classmt then
