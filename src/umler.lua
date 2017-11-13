@@ -45,7 +45,15 @@ end
 
 local arrows = {}
 local classmt = {}
-classmt.__index = classmt
+function classmt:__index(k)
+    if classmt[k]~=nil then
+        return classmt[k]
+    elseif k=='Fields' or k=='Methods' then
+        local r={}
+        self[k]=r
+        return r
+    end
+end
 do
     for name, style in next, {
         depends = {shape = 'dashed', head = 'open'},
@@ -284,5 +292,4 @@ local function procroot(env,rootname)
 end
 
 assert(loadfile(arg[1],'t',env))()
-io.stderr:write(inspect(env.Client.Views))
 procroot(env,'WebShoppe')

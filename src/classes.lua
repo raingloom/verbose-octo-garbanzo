@@ -86,6 +86,7 @@ do
             if cls~=View then
                 cls:specializes(View)
             end
+            cls.Fields.session = 'Session'
         end
     end
 
