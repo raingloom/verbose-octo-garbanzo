@@ -34,13 +34,22 @@ local function UH(...)
     return table.unpack(t)
 end
 
+local function defget(t,k,d)
+    local r = t[k]
+    if r==nil then
+        r = d
+        t[k] = d
+    end
+    return r
+end
+
 local arrows = {}
 local classmt = {}
 classmt.__index = classmt
 do
     for name, style in next, {
         depends = {shape = 'dashed', head = 'open'},
-        associate = {shape = 'solid', head = 'open'},
+        associated = {shape = 'solid', head = 'open'},
         aggregates = {shape = 'solid', tail = 'diamond', dir = 'back'},
         contains = {shape = 'solid', tail = 'odiamond', dir = 'back'},
         specializes = {shape = 'solid', head = 'normal'},
@@ -70,7 +79,9 @@ do
 end
 
 local env = {}
+local builtins = {}
 local envmt = {}
+local envs = {[env]=_ENV}
 local modulemt = envmt
 do
     local function wters(w)
@@ -91,32 +102,42 @@ do
         end
     end
     
-    env.getters = wters 'get'
-    env.setters = wters 'set'
+    builtins.getters = wters 'get'
+    builtins.setters = wters 'set'
 
-    function env.Class(t)
+    function builtins.Class(t)
         return setmetatable(t,classmt)
     end
 
-    function env.Interface(t)
+    function builtins.Interface(t)
         t.interface = true
-        return env.Class(t)
+        return builtins.Class(t)
     end
 
-    function env.Abstract(t)
+    function builtins.Abstract(t)
         t.abstract = true
-        return env.Class(t)
+        return builtins.Class(t)
     end
 
-    function env.Module(t)
-        return setmetatable(t,modulemt)
+    function builtins.Enum(t)
+        local c = {}
+        for _,k in ipairs(t) do
+            c[k] = ''
+        end
+        return builtins.Class{Fields=builtins.public(c)}
     end
 
     function envmt:__index(k)
-        if self~=env and env[k]~=nil then
-            return env[k]
-        elseif _ENV[k]~=nil then
-            return _ENV[k]
+        if k == 'Module' then
+            return function()
+                local r = setmetatable({},modulemt)
+                envs[r] = self
+                return r
+            end
+        elseif builtins[k]~=nil then
+            return builtins[k]
+        elseif envs[self][k]~=nil then
+            return envs[self][k]
         else
             local t = {}
             self[k] = t
@@ -124,30 +145,30 @@ do
         end
     end
 
-    function privacy(t,p)
+    local function privacy(t,p)
         local r={}
         for k,v in pairs(t) do
-            t[p..k]=v
+            r[p..k]=v
         end
         return r
     end
 
-    function env.private(t)
+    function builtins.private(t)
         return privacy(t,'-')
     end
 
-    function env.public(t)
+    function builtins.public(t)
         return privacy(t,'+')
     end
 
-    function env.combine(...)
+    function builtins.combine(...)
         local r = {}
         for _,t in ipairs{...} do
             for k,v in pairs(t) do
                 r[k]=v
             end
         end
-        return t
+        return r
     end
 
     setmetatable(env,envmt)
@@ -263,4 +284,5 @@ local function procroot(env,rootname)
 end
 
 assert(loadfile(arg[1],'t',env))()
+io.stderr:write(inspect(env.Client.Views))
 procroot(env,'WebShoppe')
