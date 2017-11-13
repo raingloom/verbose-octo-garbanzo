@@ -192,13 +192,11 @@ local function procclass(name, tbl, path)
             HR()
             local function procfields(tbl, k)
                 for fieldname, field in pairs( tbl[k] or {} ) do
-                    local privacy, fieldname = fieldname:match('([%+%-]?)(.*)')
-                    privacy = privacy == '' and (k == 'Fields' and '-' or '+') or privacy
                     W '<TR><TD ALIGN="LEFT">'
                     if k == 'Methods' then
-                        W(privacy, UH(fieldname, field))
+                        W(UH(fieldname, field))
                     else
-                        W(privacy, UH(fieldname), ':', UH(field))
+                        W(UH(fieldname), ':', UH(field))
                     end
                     W '</TD></TR>'
                     W '\n'
