@@ -1,4 +1,4 @@
-if not package.loaded.StackTracePlus then
+if false and not package.loaded.StackTracePlus then
     local STP = require 'StackTracePlus'
     return assert(
         xpcall(
@@ -65,6 +65,7 @@ do
         implements = {shape = 'dashed', tail = 'normal', dir = 'back'},
     } do
         classmt[name] = function(self, other, labels)
+            --io.stderr:write('self=',inspect(self),',other=',inspect(other),'\n')
             local head = '%s->%s['
             local t = {}
             for attr, val in pairs(style) do
@@ -90,6 +91,17 @@ local env = {}
 local builtins = {}
 local envmt = {}
 local envs = {[env]=_ENV}
+local vals = {[env]={}}
+do
+    local t = {}
+    local mt = {__index=t}
+    function mt:__newindex(k,v)
+        assert(t[k]==nil,'attempt to redefine WORM value')
+        t[k]=v
+    end
+    setmetatable(vals,mt)
+end
+
 local modulemt = envmt
 do
     local function wters(w)
@@ -140,17 +152,37 @@ do
             return function()
                 local r = setmetatable({},modulemt)
                 envs[r] = self
+                vals[r] = {}
                 return r
             end
+        elseif vals[self][k]~=nil then
+            return vals[self][k]
         elseif builtins[k]~=nil then
             return builtins[k]
         elseif envs[self][k]~=nil then
             return envs[self][k]
         else
-            local t = {}
-            self[k] = t
+            local t = setmetatable({},classmt)
+            vals[self][k] = t
             return t
         end
+    end
+
+    function envmt:__newindex(k,v)
+        assert(k~='Method')
+        if vals[self][k]~=nil then
+            local val=vals[self][k]
+            for vk,vv in pairs(v) do
+                val[vk]=vv
+            end
+            setmetatable(val,getmetatable(v))
+        else
+            vals[self][k]=v
+        end
+    end
+
+    function envmt:__pairs()
+        return pairs(vals[self])
     end
 
     local function privacy(t,p)
@@ -192,8 +224,8 @@ local function procarrows(arrows)
         L(
             string.format(
                 arrow.fmt,
-                nodenames[arrow.from],
-                nodenames[arrow.to]
+                assert(nodenames[arrow.from]),
+                assert(nodenames[arrow.to])
             )
         )
     end
