@@ -1,4 +1,4 @@
-if false and not package.loaded.StackTracePlus then
+if not package.loaded.StackTracePlus then
     local STP = require 'StackTracePlus'
     return assert(
         xpcall(
@@ -149,10 +149,10 @@ do
 
     function envmt:__index(k)
         if k == 'Module' then
-            return function()
+            return function(t)
                 local r = setmetatable({},modulemt)
                 envs[r] = self
-                vals[r] = {}
+                vals[r] = t
                 return r
             end
         elseif vals[self][k]~=nil then

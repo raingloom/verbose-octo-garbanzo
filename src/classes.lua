@@ -7,7 +7,6 @@ Shared = Module
     Token = Class{},
 }
 
-
 Server = Module{}
 do
     local _ENV = Server
@@ -42,20 +41,11 @@ end
 
 Clients = Module{}
 do
-    
-    local function spechelper(m,Views)
-        for _,cls in pairs(m) do
-            if cls~=View then
-                cls.Methods = combine(View.Methods, cls.Methods)
-                cls.Fields = combine(View.Fields, cls.Fields)
-                cls:specializes(View)
-            end
-        end
-    end
-    
     local _ENV = Clients
-
-    Shared = Module {
+    
+    Shared = Module {}
+    do
+        local _ENV = Shared
         Session = Abstract
         {
             Fields = {
@@ -66,9 +56,9 @@ do
                 register = Server.User.Methods.User,
                 login = '(email:Email,password:Password)',
             },
-        },
+        }
         
-        Product = Class{},
+        Product = Class{}
         
         Cart = Class
         {
@@ -79,10 +69,26 @@ do
                 clear = '()',
                 price = '():Money',
             }
-        },
+        }
 
-        View = Abstract{},
-    }
+        View = Abstract
+        {
+            Methods = {
+                render = '()',
+            },
+        }
+    end
+    
+    local function spechelper(m)
+        local View = Shared.View
+        for _,cls in pairs(m) do
+            if cls~=View then
+                cls.Methods = combine(View.Methods, cls.Methods)
+                cls.Fields = combine(View.Fields, cls.Fields)
+                cls:specializes(View)
+            end
+        end
+    end
 
     Customer = Module{}
     do
@@ -133,19 +139,22 @@ do
     Vendor = Module{}
     do
         local _ENV = Vendor
-
-        IncomingOrders = Class
-        {
+        local Views = Module {}
+        do
+            local _ENV = Views
             
-        }
-
-        AddProduct = Class
-        {
-            Methods = {
-                add = '',
+            IncomingOrders = Class
+            {
+                
             }
-        }
-        
-        spechelper(_ENV,Shared.View)
+
+            AddProduct = Class
+            {
+                Methods = {
+                }
+            }
+            
+            spechelper(_ENV)
+        end
     end
 end
