@@ -1,6 +1,6 @@
 do
     local tracer = 'src.tracer'
-    if not package.loaded[tracer] then
+    if false and not package.loaded[tracer] then
         tracer = require(tracer)
         return assert(
             xpcall(
@@ -174,7 +174,7 @@ do
             local function f()
                 if k == 'Module' then
                     return function(t)
-                        local r = setmetatable(t,modulemt)
+                        local r = setmetatable({},modulemt)
                         envs[r] = self
                         vals[r] = t
                         return r
@@ -251,6 +251,69 @@ end
 --io.stderr:write(inspect(env))
 
 local nodenames = setmetatable({},weakkeys)
+
+local grammar
+do
+    local lpeg = require 'lpeg'
+    lpeg.locale(lpeg)
+
+    local function node(tag,p)
+        local function f(...)
+            local r = {...}
+            r.tag = tag
+            return r
+        end
+        return p / f
+    end
+
+    local ws = lpeg.space^0
+    
+
+    local function N(t,p)
+        local function f(...)
+            local r = table.pack(...)
+            r.tag = t
+            r.n = nil
+            return r
+        end
+        return p / f
+    end
+
+    local V,P,C = lpeg.V, lpeg.P, lpeg.C
+
+    local function node(p,t)
+        local function f(...)
+            local r = {...}
+            r.tag = t
+            return r
+        end
+        return C(p) / f
+    end
+
+    local w = lpeg.space^0
+    
+    local id = w * node(lpeg.alpha * lpeg.alnum^0, 'id')
+    local qid = w * node(id * (P'.' * id)^0, 'qid')
+    local lp = w * P'('
+    local rp = w * P')'
+    local cln = w * P':'
+    local arr = w * P'->'
+    local cma = w * P','
+    local comment = P'//' * -P''
+    grammar = {
+        type = node(qid + V'func', 'type') * (comment^-1 + w),
+        vfunc = node(lp * (V'params')^-1 * rp, 'vfunc'),
+        rfunc = node(V'vfunc' * arr * V'type', 'rfunc'),
+        func = node(V'rfunc' + V'vfunc', 'func'),
+        params = node(V'param' * (cma * V'param')^0, 'params'),
+        param = node(id * cln * V'type', 'param'),
+    }
+    for k, v in pairs(grammar) do
+        grammar[k] = w * v
+    end
+    grammar[1] = 'type'
+    grammap = P(grammar)
+end
 
 local function procarrows(arrows)
     for _, arrow in ipairs(arrows) do
@@ -360,12 +423,6 @@ local function procroot(env,rootname)
     --error(inspect{arrows=arrows,env=env,nodenames=nodenames})
     procarrows(arrows)
     L '}'
-end
-
-local function autoarrows(env)
-    local lpeg = require 'lpeg'
-    local _ENV = setmetatable({},{__index=lpeg})
-    local locale = locale()
 end
 
 assert(loadfile(arg[1],'t',env))()
