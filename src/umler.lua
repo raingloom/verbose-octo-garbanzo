@@ -312,7 +312,7 @@ do
         grammar[k] = w * v
     end
     grammar[1] = 'type'
-    grammap = P(grammar)
+    grammar = P(grammar)
 end
 
 local function procarrows(arrows)
@@ -405,11 +405,40 @@ local function procmodule(name,env,path)
 end
 
 local function autoarrows(env)
-    for _, v in pairs(env) do
-        if type(v) == 'table' and getmetatable(v) == classmt then
-            
+    local done = {}
+    local function pass1(env)
+        if done[env] then
+            return
+        end
+        done[env]=true
+        local function astpass(ast)
+            io.stderr:write(inspect(ast))
+        end
+        local function procfields(fld)
+            for nm, ty in pairs(fld) do
+                io.stderr:write(inspect(nm),'=',inspect(ty),'\n')
+                local ast = grammar:match(ty)
+                if ast then
+                    astpass(ast)
+                end
+            end
+        end
+        for _, v in pairs(env) do
+            if type(v) == 'table' then
+                if getmetatable(v) == classmt then
+                    procfields(v.Fields or {})
+                    procfields(v.Methods or {})
+                elseif getmetatable(v) == modulemt then
+                    pass1(v)
+                else
+                    error 'unexpected data'
+                end
+            else
+                error 'unexpected data'
+            end
         end
     end
+    pass1(env)
 end
 
 local function procroot(env,rootname)
