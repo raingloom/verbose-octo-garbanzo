@@ -75,6 +75,21 @@ function classmt:__call(t)
     end
     return self
 end
+local function autoarrowopt(op)
+    local labels = {}
+    local opt = {labels=labels}
+    local meth
+    if op.func then
+        meth = 'associate'
+    else
+        if not op.reference then
+            meth = 'contain'
+        end
+    end
+    return function()
+        return meth, opt
+    end
+end
 do
     for name, style in next, {
         depend = {shape = 'dashed', head = 'open'},
@@ -258,7 +273,7 @@ end
 
 local nodenames = setmetatable({},weakkeys)
 
-local grammar
+local grammar, grammart
 do
     local lpeg = require 'lpeg'
     lpeg.locale(lpeg)
@@ -305,7 +320,6 @@ do
     local cln = w * P':'
     local arr = w * P'->'
     local cma = w * P','
-    local comment = P'//' * -P''
     local amp = w * P'&'
     local lbr = w * P'['
     local rbr = w * P']'
@@ -318,9 +332,10 @@ do
     local crange = w * node(num * dd * num, 'crange')
     local range = w * node(lrange + crange + rrange, 'range')
     local mltplcty = w * node(range + num, 'mltplcty')
+    local comment = w * P'//' * -P''
     
-    grammar = {
-        type = node(V'templ' + V'func' + V'tuple' + V'reference' + V'array' + V'narray' + qid, 'type') * (comment^-1 + w),
+    grammart = {
+        type = node(V'templ' + V'func' + V'tuple' + V'reference' + V'array' + V'narray' + qid, 'type'),
         reference = node(amp * V'type', 'reference'),
         array = node(lbr * rbr * V'type', 'array'),
         narray = node(lbr * mltplcty * rbr * V'type', 'narray'),
@@ -333,11 +348,11 @@ do
         templ = node(qid * V'vtempl', 'templ'),
         tuple = node(lp * V'types'^-1 * rp, 'tuple'),
     }
-    for k, v in pairs(grammar) do
-        grammar[k] = w * v
+    for k, v in pairs(grammart) do
+        grammart[k] = w * v
     end
-    grammar[1] = 'type'
-    grammar = P(grammar)
+    grammart[1] = 'type'
+    grammar = P(grammart)
 end
 
 local function procarrows(arrows)
@@ -454,47 +469,45 @@ local function autoarrows(env)
             return
         end
         done[env]=true
-        local handlers = {}
-
-        local function handlerest(ast)
-            for i = 2, #ast do
-                handlers[ast[i].tag](ast[i])
-            end
-        end
+        local op = {}
         do
-            local op = {}
-            
-            function handlers.reference(ast)
-                local tmp = op.refness
-                op.refness = true
-                handlerest(ast)
-                op.refness = tmp
+            local stackmt = {}
+            stackmt.__index = stackmt
+            local function mkstack()
+                return setmetatable({n=0},stackmt)
             end
-            ---[[
-            function handlers.qid(ast)
-                if refness then
-                    resolve(env,ast)
-                end
+            function stackmt:push(x)
+                self[self.n + 1], self.n = x, self.n + 1
             end
-            --]]
-            do
-                local function h(s,k)
-                    local function f(ast)
-                        io.stderr:write(inspect(ast))
-                    end
-                    return f
-                end
-                setmetatable(handlers,{__index=h})
+            function stackmt:pop()
+                assert(self.n>0,'tag stack underflow')
+                local r = self[self.n]
+                self[self.n] = nil
+                self.n = self.n - 1
+                return r
             end
+            local opmt = {}
+            function opmt:__index(k)
+                self[k] = mkstack()
+                return self[k]
+            end
+            setmetatable(op,opmt)
         end
         local function astpass(ast)
-            handlerest(ast)
+            op[ast.tag]:push(ast[1])
+            for i = 2, #ast do
+                astpass(ast[i])
+            end
         end
         local function procfields(fld)
             for nm, ty in pairs(fld) do
-                local ast = grammar:match(ty)
-                if ast then
-                    astpass(ast)
+                ty = ty:gsub('%s*%/%/.-$','')
+                if #ty > 0 then
+                    local ast = grammar:match(ty)
+                    if ast then
+                        local _ = ast[1] == ty or error(string.format('failed to completely parse type\n#%q > #%q', ty, ast[1]))
+                        astpass(ast)
+                    end
                 end
             end
         end
