@@ -329,6 +329,9 @@ local function procarrows(arrows)
 end
 
 local function procclass(name, tbl, path)
+    if nodenames[tbl] then
+        return
+    end
     path:push(name)
     do
         nodenames[tbl] = path:concat('_')
@@ -371,7 +374,11 @@ local function procclass(name, tbl, path)
 end
 
 local function procmodule(name,env,path)
+    if nodenames[env] then
+        return
+    end
     path:push(name)
+    nodenames[env]=path:concat('_')
     do
         W 'subgraph cluster_'
         W (path:concat('_'))
@@ -395,6 +402,14 @@ local function procmodule(name,env,path)
         L '}'
     end
     assert(path:pop()==name)
+end
+
+local function autoarrows(env)
+    for _, v in pairs(env) do
+        if type(v) == 'table' and getmetatable(v) == classmt then
+            
+        end
+    end
 end
 
 local function procroot(env,rootname)
@@ -421,6 +436,7 @@ local function procroot(env,rootname)
 
     procmodule(rootname,env,path)
     --error(inspect{arrows=arrows,env=env,nodenames=nodenames})
+    autoarrows(env)
     procarrows(arrows)
     L '}'
 end
