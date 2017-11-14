@@ -314,7 +314,7 @@ do
     local num = w * node(lpeg.digit^1, 'num')
     
     grammar = {
-        type = node(qid + V'func' + V'reference' + V'array' + V'narray' + V'tuple', 'type') * (comment^-1 + w),
+        type = node(qid + V'tuple' + V'func' + V'reference' + V'array' + V'narray', 'type') * (comment^-1 + w),
         reference = node(amp * V'type', 'reference'),
         array = node(lbr * rbr * V'type', 'array'),
         narray = node(lbr * num * rbr * V'type', 'narray'),
@@ -323,7 +323,7 @@ do
         func = node(V'rfunc' + V'vfunc', 'func'),
         params = node(V'param' * (cma * V'param')^0, 'params'),
         param = node(id * cln * V'type', 'param'),
-        types = node(V'type' + (cma * V'type')^0,'types'),
+        types = node(V'type' * (cma * V'type')^0,'types'),
         templ = node(qid * lt * V'types' * gt,'templ'),
         tuple = node(lp * V'types' * rp, 'tuple'),
     }
@@ -332,7 +332,8 @@ do
     end
     grammar[1] = 'type'
     grammar = P(grammar)
-    --print(inspect(grammar:match("(foo : [ ] & bar)")))
+    print(inspect(grammar:match("(a,a)")))
+    return
 end
 
 local function procarrows(arrows)
@@ -450,14 +451,30 @@ local function autoarrows(env)
         end
         done[env]=true
         local handlers = {}
+        local refness
+        local arrlen
+        local function handlerest(ast)
+            for i = 2, #ast do
+                handlers[ast[i].tag](ast[i])
+            end
+        end
         do
-            function handlers.func(ast,opt)
-                
+            function handlers.reference(ast)
+                refness = true
+                handlerest(ast)
+            end
+            do
+                local function h(s,k)
+                    local function f(ast)
+                        io.stderr:write(inspect(ast))
+                    end
+                    return f
+                end
+                setmetatable(handlers,{__index=h})
             end
         end
         local function astpass(ast)
-            assert(ast.tag == 'type')
-            --io.stderr:write(inspect(ast),'\n')
+            handlerest(ast)
         end
         local function procfields(fld)
             for nm, ty in pairs(fld) do
