@@ -51,13 +51,14 @@ local function defget(t,k,d)
     local r = t[k]
     if r==nil then
         r = d
-        t[k] = d
+        t[k] = r
     end
     return r
 end
 
 local arrows = {}
 local classmt = {}
+local combines = {}
 function classmt:__index(k)
     if classmt[k]~=nil then
         return classmt[k]
@@ -111,19 +112,10 @@ do
     end
     do
         local specialize = classmt.specialize
-        --[[
         function classmt:specialize(opt)
-            for _, f in ipairs{'Fields', 'Methods'} do
-                local t = defget(self,f,{})
-                for _, spr in ipairs(opt) do
-                    for k, v in pairs(spr) do
-                        t[k] = v
-                    end
-                end
-            end
+            table.insert(combines,{self=self,opt=opt})
             return specialize(self,opt)
         end
-        ]]
     end
 end
 
@@ -493,6 +485,20 @@ local function autoarrows(env)
     pass1(env)
 end
 
+local function proccombines()
+    for _, cmb in ipairs(combines) do
+        for _, field in ipairs{'Fields', 'Methods'} do
+            local fld = cmb.self[field]
+            assert(cmb.self[field] == fld and fld ~= nil)
+            for _, cls in ipairs(cmb.opt) do
+                for k, v in pairs(cls[field] or {}) do
+                    fld[k] = v
+                end
+            end
+        end
+    end
+end
+
 local function procroot(env,rootname)
     L 'digraph {'
     L 'node [shape=rect]'
@@ -514,7 +520,7 @@ local function procroot(env,rootname)
         end
         setmetatable(path,path)
     end
-
+    proccombines()
     autoarrows(env)
     procmodule(rootname,env,path)
     procarrows(arrows)
