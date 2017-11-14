@@ -1,3 +1,5 @@
+local WebShoppe = _ENV
+
 Shared = Module
 {
     Money = Class{},
@@ -5,6 +7,11 @@ Shared = Module
     Name = Class{},
     Email = Class{},
     Token = Class{},
+    ProductID = Class{},
+    PaymentMethod = Enum {
+        'WireTransfer',
+        'CashOnDelivery',
+    },
     ProductID = Class{},
 }
 
@@ -23,11 +30,9 @@ do
         }
     }
 
-    Customer = Class
+    Customer:specialize{User}
     {
-        Fields = combine(User.Fields),
     }
-    Customer:specializes{User}
 
     Server = Class
     {
@@ -59,6 +64,18 @@ do
             },
         }
         
+        View = Abstract
+        {
+            Methods = {
+                render = '()',
+            },
+        }
+    end
+
+    Customer = Module{}
+    do
+        local _ENV = Customer
+        
         Cart = Class
         {
             Fields = {
@@ -70,47 +87,27 @@ do
             }
         }
 
-        View = Abstract
-        {
-            Methods = {
-                render = '()',
-            },
-        }
-    end
-    
-    local function spechelper(m)
-        local View = Shared.View
-        for _,cls in pairs(m) do
-            if cls~=View then
-                cls.Methods = combine(View.Methods, cls.Methods)
-                cls.Fields = combine(View.Fields, cls.Fields)
-                cls:specializes{View}
-            end
-        end
-    end
-
-    Customer = Module{}
-    do
-        local _ENV = Customer
-
         Views = Module{}
         do
             local _ENV = Views
-            Browsing = Class
+            
+            local View = Shared.View
+            
+            Browsing:specialize{View}
             {
                 Fields = {
                     filter = 'InventoryQuery //stored in view coz the user probly want this saved',
-                    listing = '(Product,Logical) //product + is it in stock',
-                    cart = 'WebShoppe::Clients::Cart'
+                    listing = '(ProductID,Logical) //product + is it in stock',
+                    cart = 'Cart'
                 },
                 Methods = {
                     list = '(filtered:Logical)',
-                    pay = '():Cart',
-                    add = '(product:Product,quantity:Natural)',
+                    pay = '():CheckCart',
+                    add = '(product:ProductID,quantity:Natural)',
                 }
-            }
+            }:associate{CheckCart,WebShoppe.Shared.ProductID}
 
-            Cart = Class
+            CheckCart:specialize{View}
             {
                 Methods = {
                     remove = '(product:Product)',
@@ -119,9 +116,9 @@ do
                     totalPrice = '():Money',
                     pay = '():PaymentMethodSelection',
                 }
-            }
+            }:associate{Product,PaymentMethodSelection}
 
-            PaymentMethodSelection = Class
+            PaymentMethodSelection:specialize{View}
             {
                 Fields = {
                     method = 'PaymentMethod',
@@ -130,8 +127,7 @@ do
                     selectMethod = '(method:PaymentMethod)',
                     confirm = '():Browsing',
                 }
-            }
-            spechelper(_ENV, Shared.View)
+            }:associate{Browsing,PaymentMethod}
         end
     end
     
@@ -150,20 +146,19 @@ do
         Views = Module {}
         do
             local _ENV = Views
-            
-            IncomingOrders:specializes(Shared.View)
+            IncomingOrders:specialize{View}
             {
                 Fields = {
                     orders = 'Vendor.Order',
                 },
             }
 
-            SingleOrder:specializes(Shared.View)
+            SingleOrder:specialize{View}
             {
                 
             }
 
-            AddProduct:specializes(Shared.View)
+            AddProduct:specialize{View}
             {
                 Methods = {
                 }
