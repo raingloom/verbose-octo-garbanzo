@@ -56,6 +56,10 @@ local function defget(t,k,d)
     return r
 end
 
+local containers = {
+    Set = true,
+}
+
 local arrows = {}
 local classmt = {}
 local combines = {}
@@ -80,15 +84,19 @@ local function autoarrowopt(op)
         local labels = {}
         local opt = {labels=labels}
         local meth
-        if op.func then
-            meth = 'associate'
+        if op.func:peek() or op.tmpl:peek() then
+            meth = 'depend'
             --labels.tail = opt.
         else
-            if not op.reference then
-                meth = 'contain'
+            if not op.reference:peek() then
+                meth = 'aggregate'
             end
         end
-        coroutine.yield(meth or 'associate', opt)
+        labels.head = op.mltplcty:peek()
+        if op.container:peek() then
+            labels.head = labels.head or '0..'
+        end
+        coroutine.yield(meth or 'depend', opt)
     end
     return coroutine.wrap(fret)
 end
@@ -489,6 +497,9 @@ local function autoarrows(env)
                 self.n = self.n - 1
                 return table.unpack(r)
             end
+            function stackmt:peek()
+                return table.unpack(self[self.n] or {})
+            end
             local opmt = {}
             function opmt:__index(k)
                 self[k] = mkstack()
@@ -497,6 +508,7 @@ local function autoarrows(env)
             setmetatable(op,opmt)
         end
         local function astpass(ast)
+            io.stderr:write(inspect({ast=ast,op=op}),'\n')
             astdepth = astdepth + 1
             if ast.tag == 'qid' then
                 for meth, opt in autoarrowopt(op) do
@@ -505,9 +517,22 @@ local function autoarrows(env)
                     cls[meth](cls,opt)
                 end
             else
+                local cntnr
+                if ast.tag=='tmpl' then
+                    if containers[ast[1][1]] then
+                        cntnr = ast[1][1]
+                    end
+                end
                 op[ast.tag]:push(ast[1])
+                if cntnr then
+                    op.container:push(cntnr)
+                end
                 for i = 2, #ast do
                     astpass(ast[i])
+                end
+                op[ast.tag]:pop()
+                if cntnr then
+                    op.container:pop()
                 end
             end
             astdepth = astdepth - 1
