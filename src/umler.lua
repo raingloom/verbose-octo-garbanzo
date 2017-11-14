@@ -312,28 +312,32 @@ do
     local lt = w * P'<'
     local gt = w * P'>'
     local num = w * node(lpeg.digit^1, 'num')
+    local dd = w * P'..'
+    local lrange = w * node(dd * num, 'lrange')
+    local rrange = w * node(num * dd, 'rrange')
+    local crange = w * node(num * dd * num, 'crange')
+    local range = w * node(lrange + crange + rrange, 'range')
+    local mltplcty = w * node(range + num, 'mltplcty')
     
     grammar = {
-        type = node(qid + V'tuple' + V'func' + V'reference' + V'array' + V'narray', 'type') * (comment^-1 + w),
+        type = node(V'templ' + V'func' + V'tuple' + V'reference' + V'array' + V'narray' + qid, 'type') * (comment^-1 + w),
         reference = node(amp * V'type', 'reference'),
         array = node(lbr * rbr * V'type', 'array'),
-        narray = node(lbr * num * rbr * V'type', 'narray'),
-        vfunc = node(lp * (V'params')^-1 * rp, 'vfunc'),
-        rfunc = node(V'vfunc' * arr * V'type', 'rfunc'),
-        func = node(V'rfunc' + V'vfunc', 'func'),
+        narray = node(lbr * mltplcty * rbr * V'type', 'narray'),
+        vfunc = lp * (V'params'^-1) * rp, 'vfunc',
+        func = node(V'vfunc' * arr * V'type', 'func'),
         params = node(V'param' * (cma * V'param')^0, 'params'),
         param = node(id * cln * V'type', 'param'),
-        types = node(V'type' * (cma * V'type')^0,'types'),
-        templ = node(qid * lt * V'types' * gt,'templ'),
-        tuple = node(lp * V'types' * rp, 'tuple'),
+        types = node(V'type' * (cma * V'type')^0, 'types'),
+        vtempl = lt * V'types'^-1 * gt,
+        templ = node(qid * V'vtempl', 'templ'),
+        tuple = node(lp * V'types'^-1 * rp, 'tuple'),
     }
     for k, v in pairs(grammar) do
         grammar[k] = w * v
     end
     grammar[1] = 'type'
     grammar = P(grammar)
-    print(inspect(grammar:match("(a,a)")))
-    return
 end
 
 local function procarrows(arrows)
@@ -451,18 +455,28 @@ local function autoarrows(env)
         end
         done[env]=true
         local handlers = {}
-        local refness
-        local arrlen
+
         local function handlerest(ast)
             for i = 2, #ast do
                 handlers[ast[i].tag](ast[i])
             end
         end
         do
+            local op = {}
+            
             function handlers.reference(ast)
-                refness = true
+                local tmp = op.refness
+                op.refness = true
                 handlerest(ast)
+                op.refness = tmp
             end
+            ---[[
+            function handlers.qid(ast)
+                if refness then
+                    resolve(env,ast)
+                end
+            end
+            --]]
             do
                 local function h(s,k)
                     local function f(ast)
