@@ -1,18 +1,25 @@
 WebShoppe = _ENV
 
-Money = Class{}
-Address = Class{}
-Name = Class{}
-Email = Class{}
-Token = Class{}
-ProductID = Class{}
-PaymentMethod = Enum {
-    'WireTransfer',
-    'CashOnDelivery',
-}
-ProductID = Class{}
-
-Server = Module{}
+do
+    --[[PRELUDE]]
+    Natural = Class{}
+    Set = Class{}
+end
+do
+    --[[SHARED]]
+    Money = Class{}
+    Address = Class{}
+    Name = Class{}
+    Email = Class{}
+    Token = Class{}
+    ProductID = Class{}
+    PaymentMethod = Enum {
+        'WireTransfer',
+        'CashOnDelivery',
+    }
+    ProductID = Class{}
+    Server = Module{}
+end
 do
     local _ENV = Server
     User = Abstract
