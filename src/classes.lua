@@ -1,19 +1,16 @@
-local WebShoppe = _ENV
+WebShoppe = _ENV
 
-Shared = Module
-{
-    Money = Class{},
-    Address = Class{},
-    Name = Class{},
-    Email = Class{},
-    Token = Class{},
-    ProductID = Class{},
-    PaymentMethod = Enum {
-        'WireTransfer',
-        'CashOnDelivery',
-    },
-    ProductID = Class{},
+Money = Class{}
+Address = Class{}
+Name = Class{}
+Email = Class{}
+Token = Class{}
+ProductID = Class{}
+PaymentMethod = Enum {
+    'WireTransfer',
+    'CashOnDelivery',
 }
+ProductID = Class{}
 
 Server = Module{}
 do
@@ -49,28 +46,24 @@ Clients = Module{}
 do
     local _ENV = Clients
     
-    Shared = Module {}
-    do
-        local _ENV = Shared
-        Session = Abstract
-        {
-            Fields = {
-                token = 'Maybe<Token>> //is user logged in?',
-                view = 'View',
-            },
-            Methods = {
-                register = Server.User.Methods.User,
-                login = '(email:Email,password:Password)',
-            },
-        }
-        
-        View = Abstract
-        {
-            Methods = {
-                render = '()',
-            },
-        }
-    end
+    Session = Abstract
+    {
+        Fields = {
+            token = 'Maybe<Token>> //is user logged in?',
+            view = 'View',
+        },
+        Methods = {
+            register = Server.User.Methods.User,
+            login = '(email:Email,password:Password)',
+        },
+    }
+    
+    View = Abstract
+    {
+        Methods = {
+            render = '()',
+        },
+    }
 
     Customer = Module{}
     do
@@ -91,7 +84,7 @@ do
         do
             local _ENV = Views
             
-            local View = Shared.View
+            local View = View
             
             Browsing:specialize{View}
             {
@@ -105,7 +98,7 @@ do
                     pay = '():CheckCart',
                     add = '(product:ProductID,quantity:Natural)',
                 }
-            }:associate{CheckCart,WebShoppe.Shared.ProductID}
+            }:associate{CheckCart,WebShoppe.ProductID}
 
             CheckCart:specialize{View}
             {
