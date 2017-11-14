@@ -37,6 +37,16 @@ local function UH(...)
     return table.unpack(t)
 end
 
+local function combine(...)
+    local r = {}
+    for _,t in ipairs{...} do
+        for k,v in pairs(t) do
+            r[k]=v
+        end
+    end
+    return r
+end
+
 local function defget(t,k,d)
     local r = t[k]
     if r==nil then
@@ -76,32 +86,44 @@ do
     } do
         classmt[name] = function(self, opt)
             local labels = opt.labels
-            local done = {}
             for _, other in ipairs(opt) do
-                if not done[other] then
-                    --io.stderr:write('self=',inspect(self),',other=',inspect(other),'\n')
-                    local head = '%s->%s['
-                    local t = {}
-                    for attr, val in pairs(style) do
-                        attr = ({
-                                head = 'arrowhead',
-                                tail = 'arrowtail',
-                               })[attr] or attr
-                        t[#t+1] = attr .. '=' .. val
-                    end
-                    for attr, val in pairs(labels or {}) do
-                        attr = ({
-                                head = 'headlabel',
-                                tail = 'taillabel',
-                               })[attr] or attr
-                        t[#t+1] = attr .. '=' .. UH(val)
-                    end
-                    arrows[#arrows+1]={fmt = head .. table.concat(t, ', ') .. ']', from = self, to = other}
-                    done[other]=true
+                --io.stderr:write('self=',inspect(self),',other=',inspect(other),'\n')
+                local head = '%s->%s['
+                local t = {}
+                for attr, val in pairs(style) do
+                    attr = ({
+                            head = 'arrowhead',
+                            tail = 'arrowtail',
+                           })[attr] or attr
+                    t[#t+1] = attr .. '=' .. val
                 end
+                for attr, val in pairs(labels or {}) do
+                    attr = ({
+                            head = 'headlabel',
+                            tail = 'taillabel',
+                           })[attr] or attr
+                    t[#t+1] = attr .. '=' .. UH(val)
+                end
+                arrows[#arrows+1]={fmt = head .. table.concat(t, ', ') .. ']', from = self, to = other}
             end
             return self
         end
+    end
+    do
+        local specialize = classmt.specialize
+        --[[
+        function classmt:specialize(opt)
+            for _, f in ipairs{'Fields', 'Methods'} do
+                local t = defget(self,f,{})
+                for _, spr in ipairs(opt) do
+                    for k, v in pairs(spr) do
+                        t[k] = v
+                    end
+                end
+            end
+            return specialize(self,opt)
+        end
+        ]]
     end
 end
 
@@ -234,15 +256,7 @@ do
         return privacy(t,'+')
     end
 
-    function builtins.combine(...)
-        local r = {}
-        for _,t in ipairs{...} do
-            for k,v in pairs(t) do
-                r[k]=v
-            end
-        end
-        return r
-    end
+    builtins.combine = combine
 
     setmetatable(env,envmt)
 end
@@ -428,21 +442,29 @@ local function autoarrows(env)
     local done = {}
 
     local cls
+
+    local function resolve(env, qid)
+        local r = env
+        for i = 2, #qid do
+            r=r[qid[i][1]]
+        end
+        return r
+    end
     
     local function pass1(env)
         if done[env] then
             return
         end
         done[env]=true
-        local function astpass(ast)
-            for _, c in ipairs(ast) do
-                if c.tag == 'qid' then
-                    cls:associate{env[c[#c][1]]}
-                end
-                if type(c[1])=='table' then
-                    astpass(c[1])
-                end
+        local handlers = {}
+        do
+            function handlers.func(ast,opt)
+                
             end
+        end
+        local function astpass(ast)
+            assert(ast.tag == 'type')
+            --io.stderr:write(inspect(ast),'\n')
         end
         local function procfields(fld)
             for nm, ty in pairs(fld) do
