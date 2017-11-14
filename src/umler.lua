@@ -76,19 +76,21 @@ function classmt:__call(t)
     return self
 end
 local function autoarrowopt(op)
-    local labels = {}
-    local opt = {labels=labels}
-    local meth
-    if op.func then
-        meth = 'associate'
-    else
-        if not op.reference then
-            meth = 'contain'
+    local function fret()
+        local labels = {}
+        local opt = {labels=labels}
+        local meth
+        if op.func then
+            meth = 'associate'
+            --labels.tail = opt.
+        else
+            if not op.reference then
+                meth = 'contain'
+            end
         end
+        coroutine.yield(meth or 'associate', opt)
     end
-    return function()
-        return meth, opt
-    end
+    return coroutine.wrap(fret)
 end
 do
     for name, style in next, {
@@ -469,6 +471,7 @@ local function autoarrows(env)
             return
         end
         done[env]=true
+        local astdepth = 0
         local op = {}
         do
             local stackmt = {}
@@ -477,14 +480,14 @@ local function autoarrows(env)
                 return setmetatable({n=0},stackmt)
             end
             function stackmt:push(x)
-                self[self.n + 1], self.n = x, self.n + 1
+                self[self.n + 1], self.n = {x, astdepth}, self.n + 1
             end
             function stackmt:pop()
                 assert(self.n>0,'tag stack underflow')
                 local r = self[self.n]
                 self[self.n] = nil
                 self.n = self.n - 1
-                return r
+                return table.unpack(r)
             end
             local opmt = {}
             function opmt:__index(k)
@@ -494,10 +497,20 @@ local function autoarrows(env)
             setmetatable(op,opmt)
         end
         local function astpass(ast)
-            op[ast.tag]:push(ast[1])
-            for i = 2, #ast do
-                astpass(ast[i])
+            astdepth = astdepth + 1
+            if ast.tag == 'qid' then
+                for meth, opt in autoarrowopt(op) do
+                    local other = resolve(env,ast)
+                    opt[1] = other
+                    cls[meth](cls,opt)
+                end
+            else
+                op[ast.tag]:push(ast[1])
+                for i = 2, #ast do
+                    astpass(ast[i])
+                end
             end
+            astdepth = astdepth - 1
         end
         local function procfields(fld)
             for nm, ty in pairs(fld) do
