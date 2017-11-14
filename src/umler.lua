@@ -300,19 +300,33 @@ do
     local arr = w * P'->'
     local cma = w * P','
     local comment = P'//' * -P''
+    local amp = w * P'&'
+    local lbr = w * P'['
+    local rbr = w * P']'
+    local lt = w * P'<'
+    local gt = w * P'>'
+    local num = w * node(lpeg.digit^1, 'num')
+    
     grammar = {
-        type = node(qid + V'func', 'type') * (comment^-1 + w),
+        type = node(qid + V'func' + V'reference' + V'array' + V'narray', 'type') * (comment^-1 + w),
+        reference = node(amp * V'type', 'reference'),
+        array = node(lbr * rbr * V'type', 'array'),
+        narray = node(lbr * num * rbr * V'type', 'narray'),
         vfunc = node(lp * (V'params')^-1 * rp, 'vfunc'),
         rfunc = node(V'vfunc' * arr * V'type', 'rfunc'),
         func = node(V'rfunc' + V'vfunc', 'func'),
         params = node(V'param' * (cma * V'param')^0, 'params'),
         param = node(id * cln * V'type', 'param'),
+        types = node(V'type' + (cma * V'type')^0,'types'),
+        templ = node(qid * lt * V'types' * gt,'templ'),
     }
     for k, v in pairs(grammar) do
         grammar[k] = w * v
     end
     grammar[1] = 'type'
     grammar = P(grammar)
+    print(inspect(grammar:match("(foo : [ ] & bar)")))
+    return
 end
 
 local function procarrows(arrows)
