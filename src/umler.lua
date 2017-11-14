@@ -167,29 +167,42 @@ do
         return builtins.Class{Fields=builtins.public(c)}
     end
 
-    function envmt:__index(k)
-        if k == 'Module' then
-            return function(t)
-                local r = setmetatable({},modulemt)
-                envs[r] = self
-                vals[r] = t
-                return r
+    do
+        local envlevel = 0
+        function envmt:__index(k)
+            envlevel = envlevel + 1
+            local function f()
+                if k == 'Module' then
+                    return function(t)
+                        local r = setmetatable({},modulemt)
+                        envs[r] = self
+                        vals[r] = t
+                        return r
+                    end
+                elseif vals[self][k]~=nil then
+                    return vals[self][k]
+                elseif builtins[k]~=nil then
+                    return builtins[k]
+                elseif _ENV[k]~=nil then
+                    return _ENV[k]
+                else
+                    local r = envs[self][k]
+                    if r~=nil then
+                        return r
+                    elseif envlevel == 1 then
+                        local t = setmetatable({},classmt)
+                        vals[self][k] = t
+                        return t
+                    end
+                end
             end
-        elseif vals[self][k]~=nil then
-            return vals[self][k]
-        elseif builtins[k]~=nil then
-            return builtins[k]
-        elseif envs[self][k]~=nil then
-            return envs[self][k]
-        else
-            local t = setmetatable({},classmt)
-            vals[self][k] = t
-            return t
+            local r = f()
+            envlevel = envlevel - 1
+            return r
         end
     end
 
     function envmt:__newindex(k,v)
-        assert(k~='Method')
         if vals[self][k]~=nil then
             local val=vals[self][k]
             for vk,vv in pairs(v) do
