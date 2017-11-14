@@ -66,13 +66,13 @@ function classmt:__call(t)
 end
 do
     for name, style in next, {
-        depends = {shape = 'dashed', head = 'open'},
-        associated = {shape = 'solid', head = 'open'},
-        aggregates = {shape = 'solid', tail = 'diamond', dir = 'back'},
-        contains = {shape = 'solid', tail = 'odiamond', dir = 'back'},
-        specializes = {shape = 'solid', head = 'normal'},
-        generalizes = {shape = 'solid', tail = 'normal', dir = 'back'},
-        implements = {shape = 'dashed', tail = 'normal', dir = 'back'},
+        depend = {shape = 'dashed', head = 'open'},
+        associate = {shape = 'solid', head = 'open'},
+        aggregate = {shape = 'solid', tail = 'diamond', dir = 'back'},
+        contain = {shape = 'solid', tail = 'odiamond', dir = 'back'},
+        specialize = {shape = 'solid', head = 'normal'},
+        generalize = {shape = 'solid', tail = 'normal', dir = 'back'},
+        implement = {shape = 'dashed', tail = 'normal', dir = 'back'},
     } do
         classmt[name] = function(self, opt)
             local labels = opt.labels
@@ -174,7 +174,7 @@ do
             local function f()
                 if k == 'Module' then
                     return function(t)
-                        local r = setmetatable({},modulemt)
+                        local r = setmetatable(t,modulemt)
                         envs[r] = self
                         vals[r] = t
                         return r
@@ -360,6 +360,12 @@ local function procroot(env,rootname)
     --error(inspect{arrows=arrows,env=env,nodenames=nodenames})
     procarrows(arrows)
     L '}'
+end
+
+local function autoarrows(env)
+    local lpeg = require 'lpeg'
+    local _ENV = setmetatable({},{__index=lpeg})
+    local locale = locale()
 end
 
 assert(loadfile(arg[1],'t',env))()
