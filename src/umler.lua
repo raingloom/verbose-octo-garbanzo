@@ -325,8 +325,7 @@ do
     end
     grammar[1] = 'type'
     grammar = P(grammar)
-    print(inspect(grammar:match("(foo : [ ] & bar)")))
-    return
+    --print(inspect(grammar:match("(foo : [ ] & bar)")))
 end
 
 local function procarrows(arrows)
@@ -426,11 +425,16 @@ local function autoarrows(env)
         end
         done[env]=true
         local function astpass(ast)
-            io.stderr:write(inspect(ast))
+            for _, c in ipairs(ast) do
+                if c.tag == 'qid' then
+                    do
+                        nodenames[env[c[#c]]]=c[1]:gsub('%.','_')
+                    end
+                end
+            end
         end
         local function procfields(fld)
             for nm, ty in pairs(fld) do
-                io.stderr:write(inspect(nm),'=',inspect(ty),'\n')
                 local ast = grammar:match(ty)
                 if ast then
                     astpass(ast)
