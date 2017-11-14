@@ -105,7 +105,7 @@ do
                     pay = '():CheckCart',
                     add = '(product:ProductID,quantity:Natural)',
                 }
-            }:associate{CheckCart,WebShoppe.ProductID}
+            }
 
             CheckCart:specialize{View}
             {
@@ -116,7 +116,7 @@ do
                     totalPrice = '():Money',
                     pay = '():PaymentMethodSelection',
                 }
-            }:associate{Product,PaymentMethodSelection}
+            }
 
             PaymentMethodSelection:specialize{View}
             {
@@ -127,7 +127,7 @@ do
                     selectMethod = '(method:PaymentMethod)',
                     confirm = '():Browsing',
                 }
-            }:associate{Browsing,PaymentMethod}
+            }
         end
     end
     
