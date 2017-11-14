@@ -422,7 +422,6 @@ end
 local function autoarrows(env)
     local function qidcat(ast)
         local r = ast[1]:gsub('%s+',''):gsub('%.','_')
-        nodenames[r]=r
         return r
     end
     
