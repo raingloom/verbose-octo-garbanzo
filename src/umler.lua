@@ -1,12 +1,15 @@
-if not package.loaded.StackTracePlus then
-    local STP = require 'StackTracePlus'
-    return assert(
-        xpcall(
-            debug.getinfo(1).func,
-            STP.stacktrace,
-            ...
+do
+    local tracer = 'src.tracer'
+    if not package.loaded[tracer] then
+        tracer = require(tracer)
+        return assert(
+            xpcall(
+                debug.getinfo(1).func,
+                tracer.handler,
+                ...
+            )
         )
-    )
+    end
 end
 
 local inspect = require 'inspect'
@@ -54,6 +57,13 @@ function classmt:__index(k)
         return r
     end
 end
+function classmt:__call(t)
+    assert(type(t)=='table')
+    for k, v in pairs(t) do
+        self[k] = v
+    end
+    return self
+end
 do
     for name, style in next, {
         depends = {shape = 'dashed', head = 'open'},
@@ -64,34 +74,44 @@ do
         generalizes = {shape = 'solid', tail = 'normal', dir = 'back'},
         implements = {shape = 'dashed', tail = 'normal', dir = 'back'},
     } do
-        classmt[name] = function(self, other, labels)
-            --io.stderr:write('self=',inspect(self),',other=',inspect(other),'\n')
-            local head = '%s->%s['
-            local t = {}
-            for attr, val in pairs(style) do
-                attr = ({
-                        head = 'arrowhead',
-                        tail = 'arrowtail',
-                       })[attr] or attr
-                t[#t+1] = attr .. '=' .. val
+        classmt[name] = function(self, opt)
+            local labels = opt.labels
+            local done = {}
+            for _, other in ipairs(opt) do
+                if not done[other] then
+                    --io.stderr:write('self=',inspect(self),',other=',inspect(other),'\n')
+                    local head = '%s->%s['
+                    local t = {}
+                    for attr, val in pairs(style) do
+                        attr = ({
+                                head = 'arrowhead',
+                                tail = 'arrowtail',
+                               })[attr] or attr
+                        t[#t+1] = attr .. '=' .. val
+                    end
+                    for attr, val in pairs(labels or {}) do
+                        attr = ({
+                                head = 'headlabel',
+                                tail = 'taillabel',
+                               })[attr] or attr
+                        t[#t+1] = attr .. '=' .. UH(val)
+                    end
+                    arrows[#arrows+1]={fmt = head .. table.concat(t, ', ') .. ']', from = self, to = other}
+                    done[other]=true
+                end
             end
-            for attr, val in pairs(labels or {}) do
-                attr = ({
-                        head = 'headlabel',
-                        tail = 'taillabel',
-                       })[attr] or attr
-                t[#t+1] = attr .. '=' .. UH(val)
-            end
-            arrows[#arrows+1]={fmt = head .. table.concat(t, ', ') .. ']', from = self, to = other}
+            return self
         end
     end
 end
 
+local weakkeys = {__mode='k'}
+
 local env = {}
 local builtins = {}
 local envmt = {}
-local envs = {[env]=_ENV}
-local vals = {[env]={}}
+local envs = setmetatable({[env]=_ENV},weakkeys)
+local vals = setmetatable({[env]={}},weakkeys)
 do
     local t = {}
     local mt = {__index=t}
@@ -217,15 +237,16 @@ end
 --local out = assert(io.open(arg[1],'w'))
 --io.stderr:write(inspect(env))
 
-local nodenames = {}
+local nodenames = setmetatable({},weakkeys)
 
 local function procarrows(arrows)
     for _, arrow in ipairs(arrows) do
+        local arrow = arrow
         L(
             string.format(
                 arrow.fmt,
-                assert(nodenames[arrow.from]),
-                assert(nodenames[arrow.to])
+                assert(nodenames[arrow.from],'unnamed head'),
+                assert(nodenames[arrow.to], 'unnamed tail')
             )
         )
     end
@@ -288,7 +309,11 @@ local function procmodule(name,env,path)
                     procclass(k,v,path)
                 elseif getmetatable(v) == modulemt then
                     procmodule(k,v,path)
+                else
+                    error 'unexpected data'
                 end
+            else
+                error 'unexpected data'
             end
         end    
         L '}'
@@ -319,6 +344,7 @@ local function procroot(env,rootname)
     end
 
     procmodule(rootname,env,path)
+    --error(inspect{arrows=arrows,env=env,nodenames=nodenames})
     procarrows(arrows)
     L '}'
 end
