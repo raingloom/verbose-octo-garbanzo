@@ -5,6 +5,7 @@ Shared = Module
     Name = Class{},
     Email = Class{},
     Token = Class{},
+    ProductID = Class{},
 }
 
 Server = Module{}
@@ -26,7 +27,7 @@ do
     {
         Fields = combine(User.Fields),
     }
-    Customer:specializes(User)
+    Customer:specializes{User}
 
     Server = Class
     {
@@ -58,12 +59,10 @@ do
             },
         }
         
-        Product = Class{}
-        
         Cart = Class
         {
             Fields = {
-                items = '(ItemID,Natural) //again, tuple. good languages have them. use a good language.',
+                items = '(ItemID,Natural)',
             },
             Methods = {
                 clear = '()',
@@ -85,7 +84,7 @@ do
             if cls~=View then
                 cls.Methods = combine(View.Methods, cls.Methods)
                 cls.Fields = combine(View.Fields, cls.Fields)
-                cls:specializes(View)
+                cls:specializes{View}
             end
         end
     end
@@ -139,22 +138,36 @@ do
     Vendor = Module{}
     do
         local _ENV = Vendor
-        local Views = Module {}
+
+        Order = Class
+        {
+            Fields = public
+            {
+                items = '(ProductID,Natural)'
+            },
+        }
+
+        Views = Module {}
         do
             local _ENV = Views
             
-            IncomingOrders = Class
+            IncomingOrders:specializes(Shared.View)
+            {
+                Fields = {
+                    orders = 'Vendor.Order',
+                },
+            }
+
+            SingleOrder:specializes(Shared.View)
             {
                 
             }
 
-            AddProduct = Class
+            AddProduct:specializes(Shared.View)
             {
                 Methods = {
                 }
             }
-            
-            spechelper(_ENV)
         end
     end
 end
