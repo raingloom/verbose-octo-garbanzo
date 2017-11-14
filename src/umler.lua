@@ -1,6 +1,6 @@
 do
     local tracer = 'src.tracer'
-    if false and not package.loaded[tracer] then
+    if not package.loaded[tracer] then
         tracer = require(tracer)
         return assert(
             xpcall(
@@ -329,15 +329,17 @@ do
 end
 
 local function procarrows(arrows)
+    local set = {}
     for _, arrow in ipairs(arrows) do
-        local arrow = arrow
-        L(
-            string.format(
-                arrow.fmt,
-                assert(nodenames[arrow.from],'unnamed head'),
-                assert(nodenames[arrow.to], 'unnamed tail')
-            )
+        arrow = string.format(
+            arrow.fmt,
+            assert(nodenames[arrow.from],'unnamed head'),
+            assert(nodenames[arrow.to], 'unnamed tail')
         )
+        set[arrow] = true
+    end
+    for k in pairs(set) do
+        L(k)
     end
 end
 
@@ -418,7 +420,16 @@ local function procmodule(name,env,path)
 end
 
 local function autoarrows(env)
+    local function qidcat(ast)
+        local r = ast[1]:gsub('%s+',''):gsub('%.','_')
+        nodenames[r]=r
+        return r
+    end
+    
     local done = {}
+
+    local cls
+    
     local function pass1(env)
         if done[env] then
             return
@@ -427,9 +438,10 @@ local function autoarrows(env)
         local function astpass(ast)
             for _, c in ipairs(ast) do
                 if c.tag == 'qid' then
-                    do
-                        nodenames[env[c[#c]]]=c[1]:gsub('%.','_')
-                    end
+                    cls:associate{env[c[#c][1]]}
+                end
+                if type(c[1])=='table' then
+                    astpass(c[1])
                 end
             end
         end
@@ -444,6 +456,7 @@ local function autoarrows(env)
         for _, v in pairs(env) do
             if type(v) == 'table' then
                 if getmetatable(v) == classmt then
+                    cls = v
                     procfields(v.Fields or {})
                     procfields(v.Methods or {})
                 elseif getmetatable(v) == modulemt then
@@ -481,9 +494,8 @@ local function procroot(env,rootname)
         setmetatable(path,path)
     end
 
-    procmodule(rootname,env,path)
-    --error(inspect{arrows=arrows,env=env,nodenames=nodenames})
     autoarrows(env)
+    procmodule(rootname,env,path)
     procarrows(arrows)
     L '}'
 end
