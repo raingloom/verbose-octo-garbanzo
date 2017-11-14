@@ -314,7 +314,7 @@ do
     local num = w * node(lpeg.digit^1, 'num')
     
     grammar = {
-        type = node(qid + V'func' + V'reference' + V'array' + V'narray', 'type') * (comment^-1 + w),
+        type = node(qid + V'func' + V'reference' + V'array' + V'narray' + V'tuple', 'type') * (comment^-1 + w),
         reference = node(amp * V'type', 'reference'),
         array = node(lbr * rbr * V'type', 'array'),
         narray = node(lbr * num * rbr * V'type', 'narray'),
@@ -325,6 +325,7 @@ do
         param = node(id * cln * V'type', 'param'),
         types = node(V'type' + (cma * V'type')^0,'types'),
         templ = node(qid * lt * V'types' * gt,'templ'),
+        tuple = node(lp * V'types' * rp, 'tuple'),
     }
     for k, v in pairs(grammar) do
         grammar[k] = w * v
