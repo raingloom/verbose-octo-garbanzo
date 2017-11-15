@@ -2,44 +2,114 @@ WebShoppe = _ENV
 
 do
     --[[PRELUDE]]
-    Copy = Interface{Comment = 'marker trait'}
+    --Copy = Interface{Comment = 'marker trait'}
     
-    Natural:implement{Copy}
-    Logical:implement{Copy}
-    Set:implement{Copy}:template '<T>'
-    Maybe:implement{Copy}:template '<T>'
-    Text:implement{Copy}
-    Any:implement{Copy}
-    Range:implement{Copy}:template '<T>'
+    Natural{Comment = 'Természetes számok, beleértve a nullát'}
+    Logical = Enum
+    {
+        'True',
+        'False',
+    }{Comment = 'Logikai értékek'}
+    Template(Set, '<T>'){Comment = 'Hash halmaz'}
+    {
+        Fields = {
+            add = '(<T>)->()',
+            remove = '()->()',
+        }
+    }
+    Template(Maybe, '<T>'){Comment = 'Egy opcionális T-típusú érték'}
+    Text{Comment = 'Nyomtatható Unicode szöveg'}
+    Any{Comment = 'Futásidejű dinamikus típus'}
+    Template(Range, '<T>')
+    {
+        Comment = 'Egy - bármely oldalán nyitott - intervallum'
+    }
+    Byte{Comment = '8-bites érték'}
+    Date{Comment = 'Naptári dátum'}
+    UUID
+    {
+        Comment = 'Univerzálisan Egyedi Azonosító',
+        Fields = {
+            bytes = '[128]Byte',
+        }
+    }
 end
 do
     --[[SHARED]]
-    Money:implement{Copy}
-    Address:implement{Copy}
-    Name:implement{Copy}
-    Email:implement{Copy}
-    Token:implement{Copy}
-    Password:implement{Copy}
-    ProductID:implement{Copy}
+    Currency = Enum
+    {
+        'USD',
+        'HUF',
+        'EUR',
+        'JPY',
+        'AUD',
+    }{Comment = 'Valuták azonosítói'}
+    Money{Comment = 'Pénz'}
+    {
+        Fields = {
+            amount = 'Natural',
+            currency = 'Currency',
+        }
+    }
+    Address{Comment = 'Full address of a person'}
+    Name{Comment = 'A valid name for a person'}
+    Email{Comment = 'A valid email address'}
+    Token{Command = 'Token of a login session'}
+    {
+        Fields = {
+            expires = 'Date',
+            bytes = '[]Byte',
+        }
+    }
+    Hash = Enum
+    {
+        'md5',
+        'sha256'
+    }{Comment = 'Identifier of a crpytographic hash function'}
+
+    Password
+    {
+        Comment = 'A user\'s password, stored as a hash',
+        Fields = {
+            bytes = '[]Byte',
+            salt = '[]Byte',
+            hash = 'Hash',
+        }
+    }
+    ProductID
+    {
+        Comment = 'Unique identifier for a product',
+        Fields = {
+            id = 'UUID',
+        }
+    }
     PaymentMethod = Enum {
         'WireTransfer',
         'CashOnDelivery',
-    }:implement{Copy}
-    ProductID:implement{Copy}
-    Server = Module{}
+    }{Comment = 'Method of payment'}
     InventoryQuery = Class
     {
+        Comment = 'A filter for products',
         Fields = public {
             name = 'Maybe<Text>',
             producer = 'Maybe<Text>',
             priceRange = 'Maybe<Range<Money>>',
         },
-    }:implement{Copy}
+    }
 end
+
+Server = Module{}
 do
     local _ENV = Server
+
+    DBConnection = Class
+    {
+        Comment = 'Connection to a backing database',
+    }
+    
     User = Abstract
     {
+        Comment = 'Base class for vendors and customers',
         Fields = public{
             name = 'Name',
             address = 'Address',
@@ -49,13 +119,14 @@ do
         },
     }
 
-    Customer:specialize{User}
-    {
-    }
+    Customer:specialize{User}{Comment = 'Buyer of goods'}
+    Vendor:specialize{User}{Comment = 'Seller of goods'}
 
     Server = Class
     {
+        Comment = 'Server instance',
         Fields = {
+            storage = 'DBConnection //connection to backend',
             users = 'Set<User>',
             products = 'Set<Product>',
         },
@@ -64,8 +135,9 @@ do
         }
     }
 
-    Product = Class
+    Product = Abstract
     {
+        Comment = 'Server side description of a product',
         Fields = public {
             id = 'ProductID',
             name = 'Text',
@@ -75,14 +147,50 @@ do
             misc = 'Any',
         },
     }
+
+    Products = Module{}
+    do
+        local _ENV = Products
+        Food = Class
+        {
+            Comment = 'Edible goods',
+            Fields = {
+                vegan = 'Logical',
+            }
+        }
+        Clothing = Class
+        {
+            Comment = 'Stuff to cover your flesh prison with',
+            Fields = {
+                machineWashable = 'Logical',
+            }
+        }
+        Beds = Class
+        {
+            Comment = 'For when you\'ve been slaving away at making a DSL to make UML bearable',
+            Fields = {
+                bunks = 'Maybe<Natural>',
+                kingsized = 'Logical',
+            }
+        }
+    end
 end
 
 Clients = Module{}
 do
     local _ENV = Clients
+
+    Token = Class
+    {
+        Comment = 'Browser cookie',
+        Fields = {
+            bytes = '[]Byte',
+        }
+    }
     
     Session = Abstract
     {
+        Comment = 'Base class for a customer or vendor login session',
         Fields = {
             token = 'Maybe<Token> //is user logged in?',
             view = 'View',
@@ -95,6 +203,7 @@ do
     
     View = Abstract
     {
+        Comment = 'Base class for views, which can at the least be rendered',
         Methods = {
             render = '()',
         },
@@ -106,6 +215,7 @@ do
         
         Cart = Class
         {
+            Comment = 'A vásárló kosara',
             Fields = {
                 items = '(ProductID,Natural)',
             },
