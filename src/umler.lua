@@ -659,6 +659,44 @@ local function proccombines()
     end
 end
 
+local descplaintext
+do
+    local done = {}
+    function descplaintext(name,env,fout,depth)
+        name = nodenames[env]:gsub('_','.')
+        if done[env] then
+            return
+        end
+        done[env]=true
+        depth = depth or 2
+        fout:write('\n\n',('#'):rep(depth),' ',name,'\n\n')
+        for name, env in pairs(env) do
+            if type(env) == 'table' then
+                if getmetatable(env) == modulemt then
+                    descplaintext(name,env,fout,depth+1)
+                elseif getmetatable(env) == classmt then
+                    fout:write(' - ',name)
+                    local comment = env.Comment
+                    if comment then
+                        fout:write(':',comment)
+                    end
+                    local desc = env.Desc
+                    if desc then
+                        fout:write('\n',desc)
+                    end
+                    local function procfield(fld)
+                        local t = env[fld]
+                        for k, v in pairs(t or {}) do
+                            fout:write('   - ',k,':',v,'\n')
+                        end
+                    end
+                    fout:write'\n'
+                end
+            end
+        end
+    end
+end
+
 local function procroot(env,rootname)
     L 'digraph {'
     L 'encoding="UTF-8"'
@@ -687,6 +725,7 @@ local function procroot(env,rootname)
     countclusters(env)
     procmodule(rootname,env,path)
     procarrows(arrows)
+    descplaintext(rootname,env,assert(io.open('out/plaintext','w')))
     L '}'
 end
 

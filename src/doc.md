@@ -8,9 +8,9 @@ A webshopot kliens-szerver architektúrával oldjuk meg és ez alapján két fő
 
 ![Csomagdiagram.](src/img/packages.png)
 
-Mivel a diagram túl nagy lett és mivel a PDF nem támogatja az SVG képeket, ezért az eredeti fájlokat beágyaztam ZIP tömörítéssel. Nem túlságosan elterjedt tény, de viszonylag lehet PDF / ZIP polyglotokat készíteni.
+**Mivel a diagram túl nagy lett és mivel a PDF nem támogatja az SVG képeket, ezért az eredeti fájlokat beágyaztam ZIP tömörítéssel. Nem túlságosan elterjedt tény, de lehet PDF / ZIP polyglotokat készíteni viszonylag könnyen.**
 
-Kérem zárja be ezt a dokumentumot, nevezze át .zip kiterjesztésűre és nyissa meg az `out/classes.svg` fájlt egy böngészőben.
+**Az UML megtekintéséhez kérem zárja be ezt a dokumentumot, nevezze át .zip kiterjesztésűre és nyissa meg az `out/classes.svg` fájlt egy böngészőben.**
 
 ## Segítség az SVG-hez
 Ha egy nyílra vagy osztályra viszi a kurzort az kiemelkedik a többi közül.
@@ -19,3 +19,5 @@ Ha egy nyílra vagy osztályra viszi a kurzort az kiemelkedik a többi közül.
 
 # DSL
 A DSL forráskódja megtalálható az `src` mappában.
+
+# Osztályok szöveges leírása

@@ -97,10 +97,9 @@ do
     {
         Comment = 'Szűrő termékekhez',
         Fields = public {
-            name = 'Maybe<Text>',
-            producer = 'Maybe<Text>',
-            priceRange = 'Maybe<Range<Money>>',
-            category = '&Products.Details',
+            name = 'Maybe<Text> //név (részlete)',
+            producer = 'Maybe<Text> //gyártó név (részlete)',
+            priceRange = 'Maybe<Range<Money>> //ár alsó és felő határértéke, lehetnek végtelenek',
         },
     }
     Order = Class
