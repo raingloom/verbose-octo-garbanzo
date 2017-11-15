@@ -250,15 +250,14 @@ do
             
             Browsing:specialize{View}
             {
+                Comment = 'Raktáron lévő árucikkek böngészése',
                 Fields = {
-                    filter = 'InventoryQuery //stored in view coz the user probly want this saved',
-                    listing = '(ProductID,Logical) //product + is it in stock',
-                    cart = 'Cart'
+                    filter = 'InventoryQuery',
+                    listing = '(Product,Logical) //termék + van-e raktáron',
                 },
                 Methods = {
-                    list = '(filtered:Logical)',
-                    pay = '()->CheckCart //state transfer',
-                    add = '(product:ProductID,quantity:Natural)',
+                    pay = '()->CheckCart //fizetés indítása',
+                    add = '(product:ProductID,quantity:Natural) //termék hozzáadása a kosárhoz',
                 }
             }
 
@@ -303,16 +302,22 @@ do
         do
             local _ENV = Views
 
-            Overview:specialize{View}
+            local function tranz(cls,opt)
+                local lbl = getdef(opt,'labels',{})
+                lbl.label = 'állapottranzíció'
+                return cls:associate(opt)
+            end
+            
+            tranz(Overview:specialize{View}
             {
                 Methods = {
-                    listProducts = '()->Products //state transfer',
+                    listProducts = '()->ProductListing //state transfer',
                     addProduct = '()->AddProduct  //state transfer',
                     viewOrders = '()->IncomingOrders //state transfer',
                 },
-            }
+            },{ProductListing,AddProduct,IncomingOrders})
             
-            IncomingOrders:specialize{View}
+            tranz(IncomingOrders:specialize{View}
             {
                 Fields = {
                     orders = 'Set<&Vendor.Order>',
@@ -320,9 +325,9 @@ do
                 Methods = {
                     view = '(order:Vendor.Order)->SingleOrder //state transfer',
                 }
-            }
+            },{SingleOrder})
 
-            SingleOrder:specialize{View}
+            tranz(SingleOrder:specialize{View}
             {
                 Fields = {
                     order = '&Vendor.Order',
@@ -330,9 +335,9 @@ do
                 Methods = {
                     finish = '()->Overview //state transfer',
                 }
-            }
+            },{Overview})
 
-            Products:specialize{View}
+            tranz(ProductListing:specialize{View}
             {
                 Fields = {
                     listing = 'Set<Vendor.Product>',
@@ -340,20 +345,20 @@ do
                 Methods = {
                     modify = '(product:ProductID)->ModifyProduct //state transfer',
                 }
-            }
+            },{ModifyProduct})
 
-            AddProduct:specialize{View}
+            tranz(AddProduct:specialize{View}
             {
                 Fields = {
                     product = 'Vendor.Product',
                 },
                 Methods = {
-                    add = '()->()',
+                    add = '()',
                     finish = '()->Overview //state transfer',
                 }
-            }
+            },{Overview})
 
-            ModifyProduct:specialize{View}
+            tranz(ModifyProduct:specialize{View}
             {
                 Fields = {
                     product = '&Vendor.Product',
@@ -361,7 +366,7 @@ do
                 Methods = {
                     commit = '()->Overview //state transfer',
                 }
-            }
+            },{Overview})
         end
     end
 end
