@@ -93,7 +93,7 @@ local function autoarrowopt(op)
             --labels.tail = opt.
         else
             if not op.reference:peek() then
-                meth = 'aggregate'
+                meth = 'contain'
             end
         end
         labels.head = op.mltplcty:peek()
@@ -446,6 +446,25 @@ local function procclass(name, tbl, path)
     assert(path:pop()==name)
 end
 
+local clustercount = 0
+local clusteri = 0
+local countclusters
+do
+    local done = {}
+    function countclusters(env)
+        if done[env] then
+            return
+        end
+        done[env]=true
+        for _, v in pairs(env) do
+            if type(v) == 'table' and getmetatable(v) == modulemt then
+                clustercount = clustercount + 1
+                countclusters(v)
+            end
+        end
+    end
+end
+
 local function procmodule(name,env,path)
     if nodenames[env] then
         return
@@ -454,8 +473,18 @@ local function procmodule(name,env,path)
     nodenames[env]=path:concat('_')
     do
         W 'subgraph cluster_'
-        W (path:concat('_'))
-        L ' {'
+        L (path:concat('_'))
+        W ' {'
+        L 'style="filled"'
+        do
+            local color = {}
+            for k, v in ipairs{clusteri / clustercount, 0.1, 1.0, 1.0} do
+                color[k] = ('%.03f'):format(v)
+            end
+            color = table.concat(color,' ')
+            L('fillcolor="',color,'"')
+            clusteri = clusteri + 1
+        end
         W 'label=<<B>'
         W (UH(name))
         L '</B>>'
@@ -605,7 +634,9 @@ end
 
 local function procroot(env,rootname)
     L 'digraph {'
-    L 'node [shape=rect, encoding="UTF-8"]'
+    L 'encoding="UTF-8"'
+    L 'stylesheet="style.css"'
+    L 'node [shape=rect]'
     
     local path = {n=0}
     do
@@ -626,6 +657,7 @@ local function procroot(env,rootname)
     end
     proccombines()
     autoarrows(env)
+    countclusters(env)
     procmodule(rootname,env,path)
     procarrows(arrows)
     L '}'
