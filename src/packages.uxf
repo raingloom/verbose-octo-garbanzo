@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="14.2">
+  <zoom_level>10</zoom_level>
+  <element>
+    <id>UMLPackage</id>
+    <coordinates>
+      <x>230</x>
+      <y>220</y>
+      <w>880</w>
+      <h>400</h>
+    </coordinates>
+    <panel_attributes>WebShoppe
+--
+bg=orange
+layer=-1</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLPackage</id>
+    <coordinates>
+      <x>240</x>
+      <y>250</y>
+      <w>390</w>
+      <h>350</h>
+    </coordinates>
+    <panel_attributes>Clients
+--
+bg=orange</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLPackage</id>
+    <coordinates>
+      <x>260</x>
+      <y>440</y>
+      <w>340</w>
+      <h>150</h>
+    </coordinates>
+    <panel_attributes>Customer
+--
+bg=orange
+layer=1</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLPackage</id>
+    <coordinates>
+      <x>260</x>
+      <y>280</y>
+      <w>340</w>
+      <h>150</h>
+    </coordinates>
+    <panel_attributes>Vendor
+--
+bg=orange
+layer=1</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLPackage</id>
+    <coordinates>
+      <x>300</x>
+      <y>470</y>
+      <w>300</w>
+      <h>120</h>
+    </coordinates>
+    <panel_attributes>Views
+--
+bg=orange
+layer=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLPackage</id>
+    <coordinates>
+      <x>300</x>
+      <y>310</y>
+      <w>300</w>
+      <h>120</h>
+    </coordinates>
+    <panel_attributes>Views
+--
+bg=orange
+layer=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLPackage</id>
+    <coordinates>
+      <x>690</x>
+      <y>440</y>
+      <w>390</w>
+      <h>160</h>
+    </coordinates>
+    <panel_attributes>Products
+--
+bg=orange</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLPackage</id>
+    <coordinates>
+      <x>690</x>
+      <y>270</y>
+      <w>390</w>
+      <h>160</h>
+    </coordinates>
+    <panel_attributes>Server
+--
+bg=orange
+layer=1</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>870</x>
+      <y>350</y>
+      <w>30</w>
+      <h>190</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-
+layer=2</panel_attributes>
+    <additional_attributes>10.0;10.0;10.0;170.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>610</x>
+      <y>440</y>
+      <w>290</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-
+layer=2</panel_attributes>
+    <additional_attributes>10.0;10.0;270.0;80.0</additional_attributes>
+  </element>
+</diagram>

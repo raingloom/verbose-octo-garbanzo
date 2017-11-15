@@ -100,7 +100,7 @@ do
             name = 'Maybe<Text>',
             producer = 'Maybe<Text>',
             priceRange = 'Maybe<Range<Money>>',
-            category = 'Maybe<>',
+            category = '&Products.Details',
         },
     }
     Order = Class
@@ -109,6 +109,7 @@ do
         Fields = public
         {
             items = '(ProductID,Natural) //termékkód + darabszám',
+            customer = '&Customer',
             state = 'OrderState',
         },
     }
@@ -124,7 +125,7 @@ end
 Products = Module{}
 do
     local _ENV = Products
-    Details = Abstract
+    Details = Class
     {
         Comment = 'Egy termék részletes tulajdonságai (alaposztály termékkategoriák számára)',
         Fields = public {
@@ -212,7 +213,7 @@ do
 
     local function tranz(cls,opt)
         local lbl = getdef(opt,'labels',{})
-        lbl.label = 'állapottranzíció'
+        lbl.label = 'állapotátmenet'
         return cls:associate(opt)
     end
 
@@ -245,6 +246,7 @@ do
         Comment = 'Nézet alaposztálya, ezen keresztül irányítja a felhasználó a munkamenetet',
         Methods = {
             render = '()',
+            move = '()->View',
         },
     }
 
@@ -270,7 +272,7 @@ do
             
             local View = View
             
-            Browsing:specialize{View}
+            tranz(Browsing:specialize{View}
             {
                 Comment = 'Raktáron lévő árucikkek böngészése',
                 Fields = {
@@ -282,9 +284,9 @@ do
                     add = '(product:ProductID,quantity:Natural) //termék hozzáadása a kosárhoz',
                     myorders = '()->MyOrders //eddigi rendelések megtekintése / aktívak nyomonkövetése',
                 }
-            }
+            },{MyOrders})
 
-            CheckCart:specialize{View}
+            tranz(CheckCart:specialize{View}
             {
                 Methods = {
                     remove = '(product:Products.Product)',
@@ -293,9 +295,9 @@ do
                     totalPrice = '()->Money',
                     pay = '()->PaymentMethodSelection //fizetés indítása',
                 }
-            }
+            },{PaymentMethodSelection,Browsing})
 
-            PaymentMethodSelection:specialize{View}
+            tranz(PaymentMethodSelection:specialize{View}
             {
                 Fields = {
                     method = 'PaymentMethod',
@@ -305,14 +307,17 @@ do
                     confirm = '()->MyOrders //rendelés véglegesítése, tovább a rendelések nézetre',
                     cancel = '()->Browsing //rendelés megszakítva, vissza a böngészéshez',
                 }
-            }
+            },{MyOrders,Browsing})
 
-            MyOrders:specialize{View}
+            tranz(MyOrders:specialize{View}
             {
                 Fields = {
                     orders = 'Set<Order>',
                 },
-            }
+                Methods = {
+                    back = '()->Browsing',
+                }
+            },{Browsing})
         end
     end
     
@@ -327,16 +332,16 @@ do
             tranz(Overview:specialize{View}
             {
                 Methods = {
-                    listProducts = '()->ProductListing //state transfer',
-                    addProduct = '()->AddProduct  //state transfer',
-                    viewOrders = '()->IncomingOrders //state transfer',
+                    listProducts = '()->ProductListing //termékek listázása nézetbe',
+                    addProduct = '()->AddProduct  //termék hozzáadása nézetbe',
+                    viewOrders = '()->IncomingOrders //rendelések listázása nézetbe',
                 },
             },{ProductListing,AddProduct,IncomingOrders})
             
             tranz(IncomingOrders:specialize{View}
             {
                 Fields = {
-                    orders = 'Set<&Vendor.Order>',
+                    orders = 'Set<Vendor.Order>',
                 },
                 Methods = {
                     view = '(order:Vendor.Order)->SingleOrder //state transfer',
