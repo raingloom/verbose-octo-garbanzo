@@ -32,7 +32,11 @@ end
 local function UH(...)
     local t = table.pack(...)
     for k,v in ipairs(t) do
-        t[k]=v:gsub('.',function(c)return '&#'..c:byte()..';'end)
+        local s, i = {}, 1
+        for _,c in utf8.codes(v) do
+            s[i], i = '&#'..c..';', i + 1
+        end
+        t[k]=table.concat(s)
     end
     return table.unpack(t)
 end
@@ -193,14 +197,14 @@ do
         return builtins.Class(t)
     end
 
-    function builtins.Template(t,tmp)
-        t.template = tmp
-        return builtins.Class(t)
-    end
-
     function builtins.Abstract(t)
         t.abstract = true
         return builtins.Class(t)
+    end
+
+    function builtins.Template(self,tmp)
+        self.template = assert(tmp,'no template arguments')
+        return self
     end
 
     function builtins.Enum(t)
@@ -601,7 +605,7 @@ end
 
 local function procroot(env,rootname)
     L 'digraph {'
-    L 'node [shape=rect]'
+    L 'node [shape=rect, encoding="UTF-8"]'
     
     local path = {n=0}
     do
