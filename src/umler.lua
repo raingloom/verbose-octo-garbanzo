@@ -41,6 +41,15 @@ local function UH(...)
     return table.unpack(t)
 end
 
+local function getdef(t,k,d)
+    local r = t[k]
+    if r==nil then
+        r=d
+        t[k]=r
+    end
+    return r
+end
+
 local function combine(...)
     local r = {}
     for _,t in ipairs{...} do
@@ -132,7 +141,7 @@ do
                             head = 'headlabel',
                             tail = 'taillabel',
                            })[attr] or attr
-                    t[#t+1] = attr .. '=' .. UH(val)
+                    t[#t+1] = attr .. '="' .. UH(val)..'"'
                 end
                 arrows[#arrows+1]={fmt = head .. table.concat(t, ', ') .. ']', from = self, to = other}
             end
@@ -214,6 +223,8 @@ do
         end
         return builtins.Class{Fields=builtins.public(c)}
     end
+
+    builtins.getdef = getdef
 
     do
         local envlevel = 0
@@ -359,7 +370,7 @@ do
         array = node(lbr * rbr * V'type', 'array'),
         narray = node(lbr * mltplcty * rbr * V'type', 'narray'),
         vfunc = lp * (V'params'^-1) * rp, 'vfunc',
-        func = node(V'vfunc' * arr * V'type', 'func'),
+        func = node(V'vfunc' * arr * V'type' + V'vfunc', 'func'),
         params = node(V'param' * (cma * V'param')^0, 'params'),
         param = node(id * cln * V'type', 'param'),
         types = node(V'type' * (cma * V'type')^0, 'types'),
