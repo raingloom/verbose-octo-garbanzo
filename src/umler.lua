@@ -647,7 +647,7 @@ local function procroot(env,rootname)
     L 'digraph {'
     L 'encoding="UTF-8"'
     L 'stylesheet="style.css"'
-    L 'node [shape=rect]'
+    L 'node [shape=rect, style=filled]'
     
     local path = {n=0}
     do
