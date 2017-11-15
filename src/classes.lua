@@ -2,23 +2,39 @@ WebShoppe = _ENV
 
 do
     --[[PRELUDE]]
-    Natural = Class{}
-    Set = Class{}
+    Copy = Interface{Comment = 'marker trait'}
+    
+    Natural:implement{Copy}
+    Logical:implement{Copy}
+    Set:implement{Copy}:template '<T>'
+    Maybe:implement{Copy}:template '<T>'
+    Text:implement{Copy}
+    Any:implement{Copy}
+    Range:implement{Copy}:template '<T>'
 end
 do
     --[[SHARED]]
-    Money = Class{}
-    Address = Class{}
-    Name = Class{}
-    Email = Class{}
-    Token = Class{}
-    ProductID = Class{}
+    Money:implement{Copy}
+    Address:implement{Copy}
+    Name:implement{Copy}
+    Email:implement{Copy}
+    Token:implement{Copy}
+    Password:implement{Copy}
+    ProductID:implement{Copy}
     PaymentMethod = Enum {
         'WireTransfer',
         'CashOnDelivery',
-    }
-    ProductID = Class{}
+    }:implement{Copy}
+    ProductID:implement{Copy}
     Server = Module{}
+    InventoryQuery = Class
+    {
+        Fields = public {
+            name = 'Maybe<Text>',
+            producer = 'Maybe<Text>',
+            priceRange = 'Maybe<Range<Money>>',
+        },
+    }:implement{Copy}
 end
 do
     local _ENV = Server
@@ -28,10 +44,9 @@ do
             name = 'Name',
             address = 'Address',
             email = 'Email',
+            password = 'Password',
+            tokens = 'Set<Token>',
         },
-        Methods = {
-            User = '(email:Email, password:Password, address:Address, name:Name)',
-        }
     }
 
     Customer:specialize{User}
@@ -42,10 +57,23 @@ do
     {
         Fields = {
             users = 'Set<User>',
+            products = 'Set<Product>',
         },
         Methods = {
             register = User.Methods.User,
         }
+    }
+
+    Product = Class
+    {
+        Fields = public {
+            id = 'ProductID',
+            name = 'Text',
+            producer = 'Text',
+            price = 'Money',
+            stock = 'Natural',
+            misc = 'Any',
+        },
     }
 end
 
@@ -56,7 +84,7 @@ do
     Session = Abstract
     {
         Fields = {
-            token = 'Maybe<Token>> //is user logged in?',
+            token = 'Maybe<Token> //is user logged in?',
             view = 'View',
         },
         Methods = {
@@ -79,11 +107,11 @@ do
         Cart = Class
         {
             Fields = {
-                items = '(ItemID,Natural)',
+                items = '(ProductID,Natural)',
             },
             Methods = {
                 clear = '()',
-                price = '():Money',
+                price = '()->Money',
             }
         }
 
@@ -102,7 +130,7 @@ do
                 },
                 Methods = {
                     list = '(filtered:Logical)',
-                    pay = '():CheckCart',
+                    pay = '()->CheckCart //state transfer',
                     add = '(product:ProductID,quantity:Natural)',
                 }
             }
@@ -112,9 +140,9 @@ do
                 Methods = {
                     remove = '(product:Product)',
                     setQuantity = '(product:Product,quantity:Natural)',
-                    clear = '():Browsing',
-                    totalPrice = '():Money',
-                    pay = '():PaymentMethodSelection',
+                    clear = '()->Browsing //state transfer',
+                    totalPrice = '()->Money',
+                    pay = '()->PaymentMethodSelection //state transfer',
                 }
             }
 
@@ -125,7 +153,8 @@ do
                 },
                 Methods = {
                     selectMethod = '(method:PaymentMethod)',
-                    confirm = '():Browsing',
+                    confirm = '()->Browsing //state transfer',
+                    cancel = '()->Browsing //state transfer',
                 }
             }
         end
@@ -139,28 +168,82 @@ do
         {
             Fields = public
             {
-                items = '(ProductID,Natural)'
+                items = '(ProductID,Natural)',
+            },
+        }
+
+        Product = Class
+        {
+            Fields = public {
+                name = 'Text',
+                producer = 'Text',
+                price = 'Money',
+                stock = 'Natural',
+                misc = 'Any',
             },
         }
 
         Views = Module {}
         do
             local _ENV = Views
+
+            Overview:specialize{View}
+            {
+                Methods = {
+                    listProducts = '()->Products //state transfer',
+                    addProduct = '()->AddProduct  //state transfer',
+                    viewOrders = '()->IncomingOrders //state transfer',
+                },
+            }
+            
             IncomingOrders:specialize{View}
             {
                 Fields = {
-                    orders = 'Vendor.Order',
+                    orders = 'Set<&Vendor.Order>',
                 },
+                Methods = {
+                    view = '(order:Vendor.Order)->SingleOrder //state transfer',
+                }
             }
 
             SingleOrder:specialize{View}
             {
-                
+                Fields = {
+                    order = '&Vendor.Order',
+                },
+                Methods = {
+                    finish = '()->Overview //state transfer',
+                }
+            }
+
+            Products:specialize{View}
+            {
+                Fields = {
+                    listing = 'Set<Vendor.Product>',
+                },
+                Methods = {
+                    modify = '(product:ProductID)->ModifyProduct //state transfer',
+                }
             }
 
             AddProduct:specialize{View}
             {
+                Fields = {
+                    product = 'Vendor.Product',
+                },
                 Methods = {
+                    add = '()->()',
+                    finish = '()->Overview //state transfer',
+                }
+            }
+
+            ModifyProduct:specialize{View}
+            {
+                Fields = {
+                    product = '&Vendor.Product',
+                },
+                Methods = {
+                    commit = '()->Overview //state transfer',
                 }
             }
         end
