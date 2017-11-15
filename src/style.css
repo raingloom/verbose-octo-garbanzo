@@ -7,7 +7,7 @@
 }
 .edge {
     stroke-color: black;
-    stroke-width: 2px;
+    stroke-width: 4px;
     opacity: 0.1;
     transition-property: stroke-width, stroke-color, opacity;
     transition-duration: 2s;
