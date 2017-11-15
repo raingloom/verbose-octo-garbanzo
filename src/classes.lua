@@ -25,7 +25,7 @@ do
         Comment = 'Egy - bármely oldalán nyitott - intervallum'
     }
     Byte{Comment = '8-bites érték'}
-    Date{Comment = 'Naptári dátum'}
+    Time{Comment = 'Időpont'}
     UUID
     {
         Comment = 'Univerzálisan Egyedi Azonosító',
@@ -51,13 +51,13 @@ do
             currency = 'Currency',
         }
     }
-    Address{Comment = 'Full address of a person'}
-    Name{Comment = 'A valid name for a person'}
-    Email{Comment = 'A valid email address'}
-    Token{Command = 'Token of a login session'}
+    Address{Comment = 'Teljes postai cím'}
+    Name{Comment = 'Érvényes személynév'}
+    Email{Comment = 'Érvényes elektronikus levelézési cím'}
+    Token{Command = 'Böngésző süti, lejárati időponttal'}
     {
         Fields = {
-            expires = 'Date',
+            expires = 'Time',
             bytes = '[]Byte',
         }
     }
@@ -65,37 +65,91 @@ do
     {
         'md5',
         'sha256'
-    }{Comment = 'Identifier of a crpytographic hash function'}
+    }{Comment = 'Kriptografikus ellenőrzőösszegek azonosítói'}
 
     Password
     {
-        Comment = 'A user\'s password, stored as a hash',
+        Comment = 'Egy felhasználó jelszava, ellenőrzőösszeggel és sóval együtt mentve',
         Fields = {
             bytes = '[]Byte',
             salt = '[]Byte',
             hash = 'Hash',
+        },
+        Methods = {
+            Check = '(pass:[]Byte)->Logical //összehasonlítja a tárolt összeget egy adott jelszóéval'
         }
     }
+    
     ProductID
     {
-        Comment = 'Unique identifier for a product',
+        Comment = 'Egy termék egyedi azonosítója',
         Fields = {
             id = 'UUID',
         }
     }
+
     PaymentMethod = Enum {
         'WireTransfer',
         'CashOnDelivery',
-    }{Comment = 'Method of payment'}
+    }{Comment = 'Fizetési metódusok'}
+
     InventoryQuery = Class
     {
-        Comment = 'A filter for products',
+        Comment = 'Szűrő termékekhez',
         Fields = public {
             name = 'Maybe<Text>',
             producer = 'Maybe<Text>',
             priceRange = 'Maybe<Range<Money>>',
+            category = 'Maybe<>',
         },
     }
+end
+
+Products = Module{}
+do
+    local _ENV = Products
+    Details = Abstract
+    {
+        Comment = 'Egy termék részletes tulajdonságai (alaposztály termékkategoriák számára)',
+        Fields = public {
+            name = 'Text',
+            producer = 'Text',
+            price = 'Money',
+            stock = 'Natural',
+            misc = 'Any',
+        },
+    }
+    Product = Class
+    {
+        Comment = 'Termék azonosítója és részletes leírása',
+        Fields = {
+            id = 'ProductID',
+            details = 'Details',
+        }
+    }
+    Categories = Module{}
+    do
+        local _ENV = Categories
+        Food:specialize{Details}
+        {
+            Fields = {
+                vegan = 'Logical',
+            }
+        }
+        Clothing:specialize{Details}
+        {
+            Fields = {
+                machineWashable = 'Logical',
+            }
+        }
+        Beds:specialize{Details}
+        {
+            Fields = {
+                bunks = 'Maybe<Natural>',
+                kingsized = 'Logical',
+            }
+        }
+    end
 end
 
 Server = Module{}
@@ -104,12 +158,12 @@ do
 
     DBConnection = Class
     {
-        Comment = 'Connection to a backing database',
+        Comment = 'Backend szerverhez kapcsolat',
     }
     
     User = Abstract
     {
-        Comment = 'Base class for vendors and customers',
+        Comment = 'Alaposztály felhasználóknak',
         Fields = public{
             name = 'Name',
             address = 'Address',
@@ -119,61 +173,21 @@ do
         },
     }
 
-    Customer:specialize{User}{Comment = 'Buyer of goods'}
-    Vendor:specialize{User}{Comment = 'Seller of goods'}
+    Customer:specialize{User}{Comment = 'Vásárló szerveroldali reprezentációja'}
+    Vendor:specialize{User}{Comment = 'Eladó szerveroldali reprezentációja'}
 
     Server = Class
     {
-        Comment = 'Server instance',
+        Comment = 'Egy szerver példány',
         Fields = {
-            storage = 'DBConnection //connection to backend',
+            storage = 'DBConnection',
             users = 'Set<User>',
-            products = 'Set<Product>',
+            products = 'Set<Products.Product>',
         },
         Methods = {
             register = User.Methods.User,
         }
     }
-
-    Product = Abstract
-    {
-        Comment = 'Server side description of a product',
-        Fields = public {
-            id = 'ProductID',
-            name = 'Text',
-            producer = 'Text',
-            price = 'Money',
-            stock = 'Natural',
-            misc = 'Any',
-        },
-    }
-
-    Products = Module{}
-    do
-        local _ENV = Products
-        Food = Class
-        {
-            Comment = 'Edible goods',
-            Fields = {
-                vegan = 'Logical',
-            }
-        }
-        Clothing = Class
-        {
-            Comment = 'Stuff to cover your flesh prison with',
-            Fields = {
-                machineWashable = 'Logical',
-            }
-        }
-        Beds = Class
-        {
-            Comment = 'For when you\'ve been slaving away at making a DSL to make UML bearable',
-            Fields = {
-                bunks = 'Maybe<Natural>',
-                kingsized = 'Logical',
-            }
-        }
-    end
 end
 
 Clients = Module{}
@@ -182,7 +196,7 @@ do
 
     Token = Class
     {
-        Comment = 'Browser cookie',
+        Comment = 'Böngésző süti',
         Fields = {
             bytes = '[]Byte',
         }
@@ -190,20 +204,23 @@ do
     
     Session = Abstract
     {
-        Comment = 'Base class for a customer or vendor login session',
+        Comment = 'Böngésző munkamenet alaposztálya',
         Fields = {
-            token = 'Maybe<Token> //is user logged in?',
+            token = 'Maybe<Token>',
             view = 'View',
         },
         Methods = {
             register = Server.User.Methods.User,
-            login = '(email:Email,password:Password)',
+            login = '(email:Email,password:Password)->() //itt divergál az állapot az alapján hogy a token milyen felhasználóhoz tartozik',
         },
     }
+
+    local function transition(a,b,opt)
+    end
     
     View = Abstract
     {
-        Comment = 'Base class for views, which can at the least be rendered',
+        Comment = 'Nézet alaposztálya, ezen keresztül irányítja a felhasználó a munkamenetet',
         Methods = {
             render = '()',
         },
@@ -248,8 +265,8 @@ do
             CheckCart:specialize{View}
             {
                 Methods = {
-                    remove = '(product:Product)',
-                    setQuantity = '(product:Product,quantity:Natural)',
+                    remove = '(product:Products.Product)',
+                    setQuantity = '(product:Products.Product,quantity:Natural)',
                     clear = '()->Browsing //state transfer',
                     totalPrice = '()->Money',
                     pay = '()->PaymentMethodSelection //state transfer',
@@ -262,7 +279,7 @@ do
                     method = 'PaymentMethod',
                 },
                 Methods = {
-                    selectMethod = '(method:PaymentMethod)',
+                    selectMethod = '(method:PaymentMethod)->()',
                     confirm = '()->Browsing //state transfer',
                     cancel = '()->Browsing //state transfer',
                 }
@@ -279,17 +296,6 @@ do
             Fields = public
             {
                 items = '(ProductID,Natural)',
-            },
-        }
-
-        Product = Class
-        {
-            Fields = public {
-                name = 'Text',
-                producer = 'Text',
-                price = 'Money',
-                stock = 'Natural',
-                misc = 'Any',
             },
         }
 
