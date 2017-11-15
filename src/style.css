@@ -1,9 +1,14 @@
-path:hover {
-    stroke: red;
-    opacity: 1;
+.edge:hover {
+    stroke-color: red;
     stroke-width: 12px;
+    opacity: 1;
+    transition-property: stroke-width, stroke-color, opacity;
+    transition-duration: 0.5s;
 }
-path {
+.edge {
+    stroke-color: black;
     stroke-width: 2px;
     opacity: 0.1;
+    transition-property: stroke-width, stroke-color, opacity;
+    transition-duration: 2s;
 }
