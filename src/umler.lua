@@ -32,7 +32,7 @@ end
 local function UH(...)
     local t = table.pack(...)
     for k,v in ipairs(t) do
-        t[k]=v:gsub('[^%w%(%)]',function(c)return '&#'..c:byte()..';'end)
+        t[k]=v:gsub('.',function(c)return '&#'..c:byte()..';'end)
     end
     return table.unpack(t)
 end
@@ -190,6 +190,11 @@ do
 
     function builtins.Interface(t)
         t.interface = true
+        return builtins.Class(t)
+    end
+
+    function builtins.Template(t,tmp)
+        t.template = tmp
         return builtins.Class(t)
     end
 
@@ -398,19 +403,31 @@ local function procclass(name, tbl, path)
             elseif tbl.interface then
                 L(UH('<<interface>>'),'<BR/>')
                 W(name)
+            elseif tbl.template then
+                W(name,UH(tbl.template))
             else
                 W(name)
+            end
+            if tbl.Comment then
+                W('<BR/><I>//',UH(tbl.Comment),'</I><BR/>')
             end
             L'</TD></TR>'
             HR()
             local function procfields(tbl, k)
                 for fieldname, field in pairs( tbl[k] or {} ) do
                     W '<TR><TD ALIGN="LEFT">'
+                    local cfield, comment = field:match '(.-)(//.*)$'
+                    if cfield then
+                        field = cfield
+                    else
+                        comment = ' '
+                    end
                     if k == 'Methods' then
                         W(UH(fieldname, field))
                     else
                         W(UH(fieldname), ':', UH(field))
                     end
+                    W('<I>', UH(comment), '</I>')
                     W '</TD></TR>'
                     W '\n'
                 end
@@ -508,7 +525,7 @@ local function autoarrows(env)
             setmetatable(op,opmt)
         end
         local function astpass(ast)
-            io.stderr:write(inspect({ast=ast,op=op}),'\n')
+            --io.stderr:write(inspect({ast=ast,op=op}),'\n')
             astdepth = astdepth + 1
             if ast.tag == 'qid' then
                 for meth, opt in autoarrowopt(op) do
@@ -519,7 +536,7 @@ local function autoarrows(env)
             else
                 local cntnr
                 if ast.tag=='tmpl' then
-                    if containers[ast[1][1]] then
+                    if qidcat(containers[ast[1][1]]) then
                         cntnr = ast[1][1]
                     end
                 end
