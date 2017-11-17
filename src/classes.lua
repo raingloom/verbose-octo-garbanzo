@@ -1,20 +1,19 @@
 WebShoppe = _ENV
 
+Prelude = Module{}
 do
-    --[[PRELUDE]]
-    --Copy = Interface{Comment = 'marker trait'}
-    
+    local _ENV = Prelude
     Natural{Comment = 'Természetes számok, beleértve a nullát'}
     Logical = Enum
     {
         'True',
         'False',
     }{Comment = 'Logikai értékek'}
-    Template(Set, '<T>'){Comment = 'Hash halmaz'}
+    Template(Set, '<T>')
     {
         Fields = {
-            add = '(<T>)->()',
-            remove = '()->()',
+            add = '(<T>)',
+            remove = '()',
         }
     }
     Template(Maybe, '<T>'){Comment = 'Egy opcionális T-típusú érték'}
@@ -24,8 +23,8 @@ do
     {
         Comment = 'Egy - bármely oldalán nyitott - intervallum'
     }
-    Byte{Comment = '8-bites érték'}
-    Time{Comment = 'Időpont'}
+    Byte{}
+    Time{}
     UUID
     {
         Comment = 'Univerzálisan Egyedi Azonosító',
@@ -34,8 +33,10 @@ do
         }
     }
 end
+
+Shared = Module{}
 do
-    --[[SHARED]]
+    local _ENV = Shared
     Currency = Enum
     {
         'USD',
@@ -44,8 +45,9 @@ do
         'JPY',
         'AUD',
     }{Comment = 'Valuták azonosítói'}
-    Money{Comment = 'Pénz'}
+    Money
     {
+        Desc = 'Az árakat és egyéb összegeket a valuta nevével együtt tároljuk, főleg azért, hogy extra típusellenőrzést kapjunk.',
         Fields = {
             amount = 'Natural',
             currency = 'Currency',
@@ -65,11 +67,15 @@ do
     {
         'md5',
         'sha256'
-    }{Comment = 'Kriptografikus ellenőrzőösszegek azonosítói'}
+    }{
+        Comment = 'Kriptografikus ellenőrzőösszegek azonosítói',
+        Desc = 'Azért tároljuk hogy lehessen inkrementálisan frissíteni az auth rendszert',
+     }
 
     Password
     {
         Comment = 'Egy felhasználó jelszava, ellenőrzőösszeggel és sóval együtt mentve',
+        Desc = 'a sót mindig a jelszó elé illesztjük hashelés előtt',
         Fields = {
             bytes = '[]Byte',
             salt = '[]Byte',
@@ -88,6 +94,13 @@ do
         }
     }
 
+    CustomerID
+    {
+        Fields = {
+            id = 'Email',
+        }
+    }
+
     PaymentMethod = Enum {
         'WireTransfer',
         'CashOnDelivery',
@@ -96,22 +109,27 @@ do
     InventoryQuery = Class
     {
         Comment = 'Szűrő termékekhez',
+        Desc = 'Az összes mezője opcionális',
         Fields = public {
             name = 'Maybe<Text> //név (részlete)',
             producer = 'Maybe<Text> //gyártó név (részlete)',
             priceRange = 'Maybe<Range<Money>> //ár alsó és felő határértéke, lehetnek végtelenek',
         },
     }
+    
     Order = Class
     {
         Comment = 'Rendelés',
+        Desc = '',
         Fields = public
         {
             items = '(ProductID,Natural) //termékkód + darabszám',
-            customer = '&Customer',
+            customer = 'CustomerID',
             state = 'OrderState',
+            initdate = 'Date',
         },
     }
+    
     OrderState = Enum
     {
         "Processing",
@@ -119,7 +137,18 @@ do
         "EnRoute",
         "Closed",
     }{Comment = 'Rendelés állapota'}
+
+    for _, cls in pairs(Prelude) do
+        cls.hide = true
+    end
 end
+
+---[[
+using {
+    Prelude,
+    --Shared
+}
+--]]
 
 Products = Module{}
 do
@@ -233,7 +262,7 @@ do
         },
         Methods = {
             register = Server.User.Methods.User,
-            login = '(email:Email,password:Password)->() //itt divergál az állapot az alapján hogy a token milyen felhasználóhoz tartozik',
+            login = '(email:Email,password:Password) //itt divergál az állapot az alapján hogy a token milyen felhasználóhoz tartozik',
         },
     }
 
@@ -302,7 +331,7 @@ do
                     method = 'PaymentMethod',
                 },
                 Methods = {
-                    selectMethod = '(method:PaymentMethod)->()',
+                    selectMethod = '(method:PaymentMethod)',
                     confirm = '()->MyOrders //rendelés véglegesítése, tovább a rendelések nézetre',
                     cancel = '()->Browsing //rendelés megszakítva, vissza a böngészéshez',
                 }

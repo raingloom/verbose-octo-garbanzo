@@ -178,6 +178,8 @@ local weakkeys = {__mode='k'}
 local env = {}
 local builtins = {}
 local envmt = {}
+local usings = {}
+local classortkeys = {}
 local envs = setmetatable({[env]=_ENV},weakkeys)
 local vals = setmetatable({[env]={}},weakkeys)
 do
@@ -213,8 +215,14 @@ do
     builtins.getters = wters 'get'
     builtins.setters = wters 'set'
 
-    function builtins.Class(t)
-        return setmetatable(t,classmt)
+    do
+        local sortkey = 1
+        function builtins.Class(t)
+            local r = setmetatable(t,classmt)
+            classortkeys[r] = sortkey
+            sortkey = sortkey + 1
+            return r
+        end
     end
 
     function builtins.Interface(t)
@@ -244,14 +252,27 @@ do
 
     do
         local envlevel = 0
+        local usingdone
         function envmt:__index(k)
             envlevel = envlevel + 1
+            if envlevel == 1 then
+                usingdone = {}
+            end
             local function f()
-                if k == 'Module' then
+                if k == 'using' then
+                    local function rf(opt)
+                        local u = defget(usings,self,{})
+                        for _, m in ipairs(opt) do
+                            table.insert(u,m)
+                        end
+                    end
+                    return rf
+                elseif k == 'Module' then
                     return function(t)
                         local r = setmetatable({},modulemt)
                         envs[r] = self
                         vals[r] = t
+                        usings[r] = {}
                         return r
                     end
                 elseif vals[self][k]~=nil then
@@ -261,13 +282,27 @@ do
                 elseif _ENV[k]~=nil then
                     return _ENV[k]
                 else
-                    local r = envs[self][k]
-                    if r~=nil then
-                        return r
-                    elseif envlevel == 1 then
-                        local t = setmetatable({},classmt)
-                        vals[self][k] = t
-                        return t
+                    if not usingdone[self] then
+                        usingdone[self] = true
+                        for i, m in ipairs(defget(usings,self,{})) do
+                            local r=m[k]
+                            if r~=nil then
+                                return r
+                            end
+                        end
+                    end
+                    do
+                        local r = envs[self][k]
+                        if r~=nil then
+                            return r
+                        end
+                    end
+                    do
+                        if envlevel == 1 then
+                            local t = builtins.Class({})
+                            vals[self][k] = t
+                            return t
+                        end
                     end
                 end
             end
@@ -669,20 +704,21 @@ do
         end
         done[env]=true
         depth = depth or 2
+        local modules={}
         fout:write('\n\n',('#'):rep(depth),' ',name,'\n\n')
         for name, env in pairs(env) do
             if type(env) == 'table' then
                 if getmetatable(env) == modulemt then
-                    descplaintext(name,env,fout,depth+1)
+                    table.insert(modules,{name,env,fout,depth+1})
                 elseif getmetatable(env) == classmt then
-                    fout:write(' - ',name)
+                    fout:write(' - **',name,'**')
                     local comment = env.Comment
                     if comment then
-                        fout:write(':',comment)
+                        fout:write(' *',comment,'*')
                     end
                     local desc = env.Desc
                     if desc then
-                        fout:write('\n',desc)
+                        fout:write('\n\n    > ',desc)
                     end
                     local function procfield(fld)
                         local t = env[fld]
@@ -694,12 +730,16 @@ do
                 end
             end
         end
+        for _, args in ipairs(modules) do
+            descplaintext(table.unpack(args))
+        end
     end
 end
 
 local function procroot(env,rootname)
     L 'digraph {'
     L 'encoding="UTF-8"'
+    L 'splines=polyline'
     L 'stylesheet="style.css"'
     L 'node [shape=rect, style=filled]'
     
