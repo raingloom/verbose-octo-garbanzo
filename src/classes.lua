@@ -141,61 +141,59 @@ do
     for _, cls in pairs(Prelude) do
         cls.hide = true
     end
-end
-
----[[
-using {
-    Prelude,
-    --Shared
-}
---]]
-
-Products = Module{}
-do
-    local _ENV = Products
-    Details = Class
-    {
-        Comment = 'Egy termék részletes tulajdonságai (alaposztály termékkategoriák számára)',
-        Fields = public {
-            name = 'Text',
-            producer = 'Text',
-            price = 'Money',
-            stock = 'Natural',
-            misc = 'Any',
-        },
-    }
-    Product = Class
-    {
-        Comment = 'Termék azonosítója és részletes leírása',
-        Fields = {
-            id = 'ProductID',
-            details = 'Details',
-        }
-    }
-    Categories = Module{}
+    
+    Products = Module{}
     do
-        local _ENV = Categories
-        Food:specialize{Details}
+        local _ENV = Products
+        Details = Class
         {
+            Comment = 'Egy termék részletes tulajdonságai (alaposztály termékkategoriák számára)',
+            Fields = public {
+                name = 'Text',
+                producer = 'Text',
+                price = 'Money',
+                stock = 'Natural',
+                misc = 'Any',
+            },
+        }
+        Product = Class
+        {
+            Comment = 'Termék azonosítója és részletes leírása',
             Fields = {
-                vegan = 'Logical',
+                id = 'ProductID',
+                details = 'Details',
             }
         }
-        Clothing:specialize{Details}
-        {
-            Fields = {
-                machineWashable = 'Logical',
+        Categories = Module{}
+        do
+            local _ENV = Categories
+            Food:specialize{Details}
+            {
+                Fields = {
+                    vegan = 'Logical',
+                }
             }
-        }
-        Beds:specialize{Details}
-        {
-            Fields = {
-                bunks = 'Maybe<Natural>',
-                kingsized = 'Logical',
+            Clothing:specialize{Details}
+            {
+                Fields = {
+                    machineWashable = 'Logical',
+                }
             }
-        }
+            Beds:specialize{Details}
+            {
+                Fields = {
+                    bunks = 'Maybe<Natural>',
+                    kingsized = 'Logical',
+                }
+            }
+        end
     end
 end
+
+using {
+    Prelude,
+    Shared
+}
 
 Server = Module{}
 do
@@ -317,7 +315,7 @@ do
             tranz(CheckCart:specialize{View}
             {
                 Methods = {
-                    remove = '(product:Products.Product)',
+                    remove = '(product:Products.ProductID)',
                     setQuantity = '(product:Products.Product,quantity:Natural)',
                     clear = '()->Browsing //kosár ürítése, vissza a böngészéshez',
                     totalPrice = '()->Money',
@@ -400,7 +398,7 @@ do
             tranz(AddProduct:specialize{View}
             {
                 Fields = {
-                    product = 'Product.Details',
+                    product = 'Products.Details',
                 },
                 Methods = {
                     add = '() //hozzáadja az új terméket (csak termékleírás, id-t ezután kap csak)',
@@ -411,7 +409,7 @@ do
             tranz(ModifyProduct:specialize{View}
             {
                 Fields = {
-                    product = '&Vendor.Product',
+                    product = 'Products.Product',
                 },
                 Methods = {
                     commit = '()->Overview //state transfer',

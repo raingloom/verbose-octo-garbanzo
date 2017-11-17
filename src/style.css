@@ -1,5 +1,5 @@
 .node:hover {
-    transform: scale(4);
+    //transform: scale(4);
     opacity: 1;
     transition-property: transform, opacity;
     transition-duration: 1s;
@@ -8,7 +8,7 @@
     transform: scale(1);
     transform-box: fill-box;
     transform-origin: center;
-    opacity: 0.5;
+    //opacity: 0.5;
     transition-property: transform, opacity;
     transition-duration: 0.5s;
 }
@@ -21,7 +21,7 @@
 }
 .edge {
     stroke-color: black;
-    stroke-width: 4px;
+    stroke-width: 8px;
     opacity: 0.1;
     transition-property: stroke-width, stroke-color, opacity;
     transition-duration: 2s;

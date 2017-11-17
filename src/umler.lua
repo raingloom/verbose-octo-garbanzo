@@ -705,27 +705,31 @@ do
         done[env]=true
         depth = depth or 2
         local modules={}
-        fout:write('\n\n',('#'):rep(depth),' ',name,'\n\n')
+        fout:write'\n' --just to be safe
+        fout:write('\n',('#'):rep(depth),' ',name,'\n\n')
         for name, env in pairs(env) do
             if type(env) == 'table' then
                 if getmetatable(env) == modulemt then
                     table.insert(modules,{name,env,fout,depth+1})
                 elseif getmetatable(env) == classmt then
-                    fout:write(' - **',name,'**')
+                    fout:write(' - ',env.interface and '*template* ' or '','**',name,env.template or '','**')
                     local comment = env.Comment
                     if comment then
                         fout:write(' *',comment,'*')
                     end
+                    fout:write'\n'
                     local desc = env.Desc
                     if desc then
-                        fout:write('\n\n    > ',desc)
+                        fout:write('\n    > *',desc,'*\n')
                     end
                     local function procfield(fld)
                         local t = env[fld]
                         for k, v in pairs(t or {}) do
-                            fout:write('   - ',k,':',v,'\n')
+                            fout:write('\n   - ',k,fld == 'Methods' and '' or ':',v,'\n')
                         end
                     end
+                    procfield'Fields'
+                    procfield'Methods'
                     fout:write'\n'
                 end
             end
@@ -740,6 +744,7 @@ local function procroot(env,rootname)
     L 'digraph {'
     L 'encoding="UTF-8"'
     L 'splines=polyline'
+    L 'rankrir=LR'
     L 'stylesheet="style.css"'
     L 'node [shape=rect, style=filled]'
     
