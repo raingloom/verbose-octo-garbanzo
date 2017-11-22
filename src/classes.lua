@@ -53,9 +53,9 @@ do
             currency = 'Currency',
         }
     }
-    Address{Comment = 'Teljes postai cím'}
-    Name{Comment = 'Érvényes személynév'}
-    Email{Comment = 'Érvényes elektronikus levelézési cím'}
+    Address{Comment = 'Teljes postai cím', hide = true}
+    Name{Comment = 'Érvényes személynév', hide = true}
+    Email{Comment = 'Érvényes elektronikus levelézési cím', hide = true}
     Token{Command = 'Böngésző süti, lejárati időponttal'}
     {
         Fields = {
@@ -128,7 +128,7 @@ do
             state = 'OrderState',
             initdate = 'Date',
         },
-    }
+    }:own{OrderState,CustomerID,ProductID}
     
     OrderState = Enum
     {
@@ -163,7 +163,7 @@ do
                 id = 'ProductID',
                 details = 'Details',
             }
-        }
+        }:own{ProductID}
         Categories = Module{}
         do
             local _ENV = Categories
@@ -230,7 +230,7 @@ do
         Methods = {
             register = User.Methods.User,
         }
-    }
+    }:own{DBConnection}:ownany{User,Products.Product}
 end
 
 Clients = Module{}
@@ -261,17 +261,14 @@ do
         Methods = {
             register = Server.User.Methods.User,
             login = '(email:Email,password:Password) //itt divergál az állapot az alapján hogy a token milyen felhasználóhoz tartozik',
-        },
-    }
-
-    local function transition(a,b,opt)
-    end
+        }
+    }:maybeown{Token}
     
     View = Abstract
     {
         Comment = 'Nézet alaposztálya, ezen keresztül irányítja a felhasználó a munkamenetet',
         Methods = {
-            render = '()',
+            render = '()->()',
             move = '()->View',
         },
     }
@@ -296,7 +293,12 @@ do
         do
             local _ENV = Views
             
-            local View = View
+            View = Class
+            {
+                Fields = {
+                    cart = '&Cart',
+                },
+            }:specialize{Clients.View}:associate{Cart}
             
             tranz(Browsing:specialize{View}
             {
@@ -310,7 +312,7 @@ do
                     add = '(product:ProductID,quantity:Natural) //termék hozzáadása a kosárhoz',
                     myorders = '()->MyOrders //eddigi rendelések megtekintése / aktívak nyomonkövetése',
                 }
-            },{MyOrders})
+            },{MyOrders}):ownany{Products.Product}:own{InventoryQuery}
 
             tranz(CheckCart:specialize{View}
             {
@@ -343,7 +345,7 @@ do
                 Methods = {
                     back = '()->Browsing',
                 }
-            },{Browsing})
+            },{Browsing}):ownany{Order}
         end
     end
     
@@ -372,7 +374,7 @@ do
                 Methods = {
                     view = '(order:Vendor.Order)->SingleOrder //state transfer',
                 }
-            },{SingleOrder})
+            },{SingleOrder}):ownany{Vendor.Order}
 
             tranz(SingleOrder:specialize{View}
             {
@@ -393,7 +395,7 @@ do
                 Methods = {
                     modify = '(product:ProductID)->ModifyProduct //state transfer',
                 }
-            },{ModifyProduct})
+            },{ModifyProduct}):ownany{Products.Product}
 
             tranz(AddProduct:specialize{View}
             {
@@ -404,7 +406,7 @@ do
                     add = '() //hozzáadja az új terméket (csak termékleírás, id-t ezután kap csak)',
                     finish = '()->Overview //state transfer',
                 }
-            },{Overview})
+            },{Overview}):own{Product.Details}
 
             tranz(ModifyProduct:specialize{View}
             {
@@ -414,7 +416,7 @@ do
                 Methods = {
                     commit = '()->Overview //state transfer',
                 }
-            },{Overview})
+            },{Overview}):own{Products.Product}
         end
     end
 end

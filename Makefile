@@ -1,4 +1,4 @@
-GV= dot
+GV= dot -Gnewrank=true
 out/classes.dot: src/umler.lua src/classes.lua src/style.css
 	cp src/style.css out/style.css
 	lua src/umler.lua src/classes.lua | tee out/classes.dot
@@ -6,7 +6,7 @@ out/plaintext: out/classes.dot
 	true
 out/classes.svg: out/classes.dot
 	$(GV) -Tsvg out/classes.dot -o out/classes.svg
-out/classes.png: #out/classes.svg #TODO
+out/classes.png: out/classes.svg #TODO
 	convert -resize 2048 out/classes.svg out/classes.png
 out/both.md: src/doc.md out/plaintext src/img/packages.png src/img/help.png out/classes.png
 	cat src/doc.md out/plaintext > out/both.md

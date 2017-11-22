@@ -133,16 +133,15 @@ do
     for name, style in next, {
         depend = {shape = 'dashed', head = 'open'},
         associate = {shape = 'solid', head = 'open'},
-        aggregate = {shape = 'solid', tail = 'diamond', dir = 'back'},
-        contain = {shape = 'solid', tail = 'odiamond', dir = 'back'},
-        specialize = {shape = 'solid', head = 'normal'},
-        generalize = {shape = 'solid', tail = 'normal', dir = 'back'},
-        implement = {shape = 'dashed', tail = 'normal', dir = 'back'},
+        aggregate = {shape = 'solid', tail = 'odiamond', dir = 'back'},
+        contain = {shape = 'solid', tail = 'diamond', dir = 'back'},
+        specialize = {shape = 'solid', head = 'onormal'},
+        generalize = {shape = 'solid', tail = 'onormal', dir = 'back'},
+        implement = {shape = 'dashed', head = 'onormal', dir = 'back'},
     } do
         classmt[name] = function(self, opt)
             local labels = opt.labels
             for _, other in ipairs(opt) do
-                --io.stderr:write('self=',inspect(self),',other=',inspect(other),'\n')
                 local head = '%s->%s['
                 local t = {}
                 for attr, val in pairs(style) do
@@ -169,6 +168,35 @@ do
         function classmt:specialize(opt)
             table.insert(combines,{self=self,opt=opt})
             return specialize(self,opt)
+        end
+    end
+    do
+        --mimic some of Rust's linear types
+        do
+            function classmt:own(opt)
+                local l = defget(opt,'labels',{})
+                l.head = '1'
+                l.tail = '1'
+                return self:contain(opt)
+            end
+            function classmt:ownsome(opt)
+                local l = defget(opt,'labels',{})
+                l.head = '1'
+                l.tail = '1..*'
+                return self:contain(opt)
+            end
+            function classmt:ownany(opt)
+                local l = defget(opt,'labels',{})
+                l.head = '1'
+                l.tail = '0..*'
+                return self:contain(opt)
+            end
+            function classmt:maybeown(opt)
+                local l = defget(opt,'labels',{})
+                l.head = '1'
+                l.tail = '0..1'
+                return self:contain(opt)
+            end
         end
     end
 end
@@ -343,6 +371,17 @@ do
     function builtins.public(t)
         return privacy(t,'+')
     end
+    
+    function builtins.hide(...)
+        for _, t in ipairs{...} do
+            t.hide = true
+        end
+        return ...
+    end
+    
+    function builtins.id(...)
+        return ...
+    end
 
     builtins.combine = combine
 
@@ -452,7 +491,7 @@ local function procarrows(arrows)
 end
 
 local function procclass(name, tbl, path)
-    if nodenames[tbl] then
+    if nodenames[tbl] or tbl.hide then
         return
     end
     path:push(name)
@@ -740,11 +779,51 @@ do
     end
 end
 
+local function filterroot(env)
+    local hiddenset = {}
+    local hidefrom = {}
+    local hideto = {}
+    local ok = {}
+    local function filterenv(env)
+        if ok[env] then
+            return
+        end
+        ok[env]=true
+        for _, t in pairs(env) do
+            if getmetatable(t)==modulemt then
+                filterenv(t)
+            elseif getmetatable(t)==classmt then
+                if t.hide then
+                    hiddenset[t]=true
+                end
+                if t.hideto then
+                    hideto[t]=true
+                end
+                if t.hidefrom then
+                    hidefrom[t]=true
+                end
+            end
+        end
+    end
+    filterenv(env)
+    io.stderr:write(inspect{hiddenset=hiddenset})
+    local dellist = {}
+    for i, arrow in ipairs(arrows) do
+        if hiddenset[arrow.from] or hiddenset[arrow.to] then
+            table.insert(dellist,i)
+        end
+    end
+    for o, i in ipairs(dellist) do
+        --TRICKY STUFF!!!
+        --we are modifying an array in-place so the original indices need to be shifted!
+        table.remove(arrows,i-o+1)
+    end
+end
+
 local function procroot(env,rootname)
     L 'digraph {'
     L 'encoding="UTF-8"'
     L 'splines=polyline'
-    L 'rankrir=LR'
     L 'stylesheet="style.css"'
     L 'node [shape=rect, style=filled]'
     
@@ -766,7 +845,8 @@ local function procroot(env,rootname)
         setmetatable(path,path)
     end
     proccombines()
-    autoarrows(env)
+    --autoarrows(env)
+    filterroot(env)
     countclusters(env)
     procmodule(rootname,env,path)
     procarrows(arrows)
